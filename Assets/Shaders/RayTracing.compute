@@ -1,0 +1,51 @@
+#pragma kernel CSMain
+
+RWTexture2D<float4> Result;
+float4x4 _CameraToWorld;
+float4x4 _CameraInverseProjection;
+
+TextureCube<float4> _SkyboxTexture;
+SamplerState sampler_SkyboxTexture;
+static const float PI = 3.14159265;
+
+struct Ray
+{
+    float3 origin;
+    float3 direction;
+};
+
+Ray CreateRay(float3 origin, float3 direction)
+{
+    Ray ray;
+    ray.origin = origin;
+    ray.direction = direction;
+    return ray;
+}
+
+Ray CreateCameraRay(float2 uv)
+{
+    // camera origin to world space
+    float3 origin = mul(_CameraToWorld, float4(0.0, 0.0, 0.0, 1.0)).xyz;
+    float3 direction = mul(_CameraInverseProjection, float4(uv, 0.0, 1.0)).xyz;
+	direction = mul(_CameraToWorld, float4(direction, 0.0)).xyz;
+	direction = normalize(direction);
+	return CreateRay(origin, direction);
+}
+
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    // get otuput dimensions
+	uint width, height;
+	Result.GetDimensions(width, height);
+    // transform pixels
+	float2 uv = (id.xy + float2(0.5, 0.5)) / float2(width, height) * 2.0 - 1.0;
+    // get ray info
+	Ray ray = CreateCameraRay(uv);
+    // sample skybox
+	//float theta = acos(ray.direction.y) / -PI;
+	//float phi = atan2(ray.direction.x, -ray.direction.z) / -PI * 0.5;
+	float raySampleScale = max(max(abs(ray.direction.x), abs(ray.direction.y)), abs(ray.direction.z));
+    // write output
+	Result[id.xy] = _SkyboxTexture.SampleLevel(sampler_SkyboxTexture, ray.direction / raySampleScale, 0);
+}
