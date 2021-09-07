@@ -3,6 +3,7 @@ Library/*
 Logs/*
 Temp/*
 obj/*
+SampleBuilds/*
 UserSettings/*
 .vsconfig
 *.csproj
