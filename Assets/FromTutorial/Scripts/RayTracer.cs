@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Linq;
 using System.Collections.Generic;
 
 public class RayTracer : MonoBehaviour
@@ -90,10 +91,15 @@ public class RayTracer : MonoBehaviour
             new Vector4(lightDir.x, lightDir.y, lightDir.z, DirectionalLight.intensity));
         RayTracingShader.SetBuffer(0, "_Spheres", _sphereBuffer);
         RayTracingShader.SetFloat("_Seed", Random.value);
+        SetComputeBuffer("_Spheres", _sphereBuffer);
+        SetComputeBuffer("_MeshObjects", _meshObjectBuffer);
+        SetComputeBuffer("_Vertices", _vertexBuffer);
+        SetComputeBuffer("_Indices", _indexBuffer);
     }
 
     private void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
+        RebuildMeshObjectBuffers();
         Render(destination);
     }
 
@@ -167,7 +173,7 @@ public class RayTracer : MonoBehaviour
             sphere.Albedo = metal ? Vector3.zero : new Vector3(color.r, color.g, color.b);
             sphere.Specular = metal ? new Vector3(color.r, color.g, color.b) : Vector3.one * 0.04f;
             // set emission
-            bool emit = Random.value < 0.8f;
+            bool emit = Random.value < 0.5f;
             color = Random.ColorHSV();
             sphere.Emission = emit ? new Vector3(color.r, color.g, color.b) : Vector3.zero;
             // set smoothness
@@ -176,5 +182,98 @@ public class RayTracer : MonoBehaviour
         }
         _sphereBuffer = new ComputeBuffer(spheres.Count, Sphere.Size);
         _sphereBuffer.SetData(spheres);
+    }
+
+    private static bool _meshObjectsNeedRebuilding = false;
+    private static List<RayTracingObject> _rayTracingObjects = new List<RayTracingObject>();
+
+    public static void RegisterObject(RayTracingObject obj)
+    {
+        _rayTracingObjects.Add(obj);
+        _meshObjectsNeedRebuilding = true;
+    }
+
+    public static void UnregisterObject(RayTracingObject obj)
+    {
+        _rayTracingObjects.Remove(obj);
+        _meshObjectsNeedRebuilding = true;
+    }
+
+    private static List<MeshObject> _meshObjects = new List<MeshObject>();
+    private static List<Vector3> _vertices = new List<Vector3>();
+    private static List<int> _indices = new List<int>();
+    private ComputeBuffer _meshObjectBuffer;
+    private ComputeBuffer _vertexBuffer;
+    private ComputeBuffer _indexBuffer;
+
+    private void RebuildMeshObjectBuffers()
+    {
+        if (!_meshObjectsNeedRebuilding)
+        {
+            return;
+        }
+        _meshObjectsNeedRebuilding = false;
+        _currentSample = 0;
+        // Clear all lists
+        _meshObjects.Clear();
+        _vertices.Clear();
+        _indices.Clear();
+        // Loop over all objects and gather their data
+        foreach (RayTracingObject obj in _rayTracingObjects)
+        {
+            Debug.Log(obj);
+            Mesh mesh = obj.GetComponent<MeshFilter>().sharedMesh;
+            // Add vertex data
+            int firstVertex = _vertices.Count;
+            _vertices.AddRange(mesh.vertices);
+            // Add index data - if the vertex buffer wasn't empty before, the
+            // indices need to be offset
+            int firstIndex = _indices.Count;
+            var indices = mesh.GetIndices(0);
+            _indices.AddRange(indices.Select(index => index + firstVertex));
+            // Add the object itself
+            _meshObjects.Add(new MeshObject()
+            {
+                localToWorldMatrix = obj.transform.localToWorldMatrix,
+                indices_offset = firstIndex,
+                indices_count = indices.Length
+            });
+        }
+        CreateComputeBuffer(ref _meshObjectBuffer, _meshObjects, 72);
+        CreateComputeBuffer(ref _vertexBuffer, _vertices, 12);
+        CreateComputeBuffer(ref _indexBuffer, _indices, 4);
+    }
+
+    private static void CreateComputeBuffer<T>(ref ComputeBuffer buffer, List<T> data, int stride)
+    where T : struct
+    {
+        // Do we already have a compute buffer?
+        if (buffer != null)
+        {
+            // If no data or buffer doesn't match the given criteria, release it
+            if (data.Count == 0 || buffer.count != data.Count || buffer.stride != stride)
+            {
+                buffer.Release();
+                buffer = null;
+            }
+        }
+        if (data.Count != 0)
+        {
+            // If the buffer has been released or wasn't there to
+            // begin with, create it
+            if (buffer == null)
+            {
+                buffer = new ComputeBuffer(data.Count, stride);
+            }
+            // Set data on the buffer
+            buffer.SetData(data);
+        }
+    }
+    private void SetComputeBuffer(string name, ComputeBuffer buffer)
+    {
+        if (buffer != null)
+        {
+            RayTracingShader.SetBuffer(0, name, buffer);
+        }
     }
 }

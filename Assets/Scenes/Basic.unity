@@ -221,12 +221,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   RayTracingShader: {fileID: 7200000, guid: 937c15c591618624e9c977b3e0632c0b, type: 3}
-  SkyboxTexture: {fileID: 8900000, guid: e8791888d6d354b48a57b55226d8d69d, type: 2}
+  SkyboxTexture: {fileID: 8900000, guid: b5048f0d8dca2ee41aaf9a2aecf4fa94, type: 2}
   DirectionalLight: {fileID: 1184883991}
   SphereRadiusMinMax: {x: 5, y: 30}
   SphereNum: 10000
   SpherePlacementRadius: 100
-  SphereSeed: 2021
+  SphereSeed: 2019
 --- !u!114 &465702726
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -241,7 +241,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   scrollSpeed: 0.5
   dragSpeed: 0.1
-  keySpeed: 0.2
+  keySpeed: 0.4
 --- !u!1 &1184883990
 GameObject:
   m_ObjectHideFlags: 0

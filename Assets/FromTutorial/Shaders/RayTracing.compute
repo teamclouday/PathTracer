@@ -51,6 +51,17 @@ struct Sphere
 
 StructuredBuffer<Sphere> _Spheres;
 
+struct MeshObject
+{
+    float4x4 localToWorldMatrix;
+    int indices_offset;
+    int indices_count;
+};
+
+StructuredBuffer<MeshObject> _MeshObjects;
+StructuredBuffer<float3> _Vertices;
+StructuredBuffer<int> _Indices;
+
 Ray CreateRay(float3 origin, float3 direction)
 {
     Ray ray;
@@ -92,10 +103,10 @@ void IntersectGroundPlane(Ray ray, inout RayHit bestHit)
         bestHit.dist = t;
         bestHit.pos = ray.origin + t * ray.dir;
         bestHit.norm = float3(0.0, 1.0, 0.0);
-        bestHit.albedo = float3(0.8, 0.8, 0.8);
-        bestHit.specular = float3(0.1, 0.1, 0.1);
+        bestHit.albedo = 1.0;
+        bestHit.specular = 0.1;
         bestHit.emission = 0.0;
-        bestHit.smoothness = 0.0;
+        bestHit.smoothness = 0.5;
     }
 }
 
@@ -118,6 +129,64 @@ void IntersectSphere(Ray ray, inout RayHit bestHit, Sphere sphere)
         bestHit.specular = sphere.specular;
         bestHit.emission = sphere.emission;
         bestHit.smoothness = sphere.smoothness;
+    }
+}
+
+// intersection with triangle
+bool IntersectTriangle_MT97(Ray ray, float3 vert0, float3 vert1, float3 vert2,
+    inout float t, inout float u, inout float v)
+{
+    // find vectors for two edges sharing vert0
+    float3 edge1 = vert1 - vert0;
+    float3 edge2 = vert2 - vert0;
+    // begin calculating determinant - also used to calculate U parameter
+    float3 pvec = cross(ray.dir, edge2);
+    // if determinant is near zero, ray lies in plane of triangle
+    float det = dot(edge1, pvec);
+    // use backface culling
+    if (det < 1e-8)
+        return false;
+    float inv_det = 1.0f / det;
+    // calculate distance from vert0 to ray origin
+    float3 tvec = ray.origin - vert0;
+    // calculate U parameter and test bounds
+    u = dot(tvec, pvec) * inv_det;
+    if (u < 0.0 || u > 1.0f)
+        return false;
+    // prepare to test V parameter
+    float3 qvec = cross(tvec, edge1);
+    // calculate V parameter and test bounds
+    v = dot(ray.dir, qvec) * inv_det;
+    if (v < 0.0 || u + v > 1.0f)
+        return false;
+    // calculate t, ray intersects triangle
+    t = dot(edge2, qvec) * inv_det;
+    return true;
+}
+
+void IntersectMeshObject(Ray ray, inout RayHit bestHit, MeshObject meshObject)
+{
+    uint offset = meshObject.indices_offset;
+    uint count = offset + meshObject.indices_count;
+    for (uint i = offset; i < count; i += 3)
+    {
+        float3 v0 = (mul(meshObject.localToWorldMatrix, float4(_Vertices[_Indices[i]], 1))).xyz;
+        float3 v1 = (mul(meshObject.localToWorldMatrix, float4(_Vertices[_Indices[i + 1]], 1))).xyz;
+        float3 v2 = (mul(meshObject.localToWorldMatrix, float4(_Vertices[_Indices[i + 2]], 1))).xyz;
+        float t, u, v;
+        if (IntersectTriangle_MT97(ray, v0, v1, v2, t, u, v))
+        {
+            if (t > 0 && t < bestHit.dist)
+            {
+                bestHit.dist = t;
+                bestHit.pos = ray.origin + t * ray.dir;
+                bestHit.norm = normalize(cross(v1 - v0, v2 - v0));
+                bestHit.albedo = 0.0f;
+                bestHit.specular = 0.65f;
+                bestHit.smoothness = 0.99f;
+                bestHit.emission = 0.0f;
+            }
+        }
     }
 }
 
@@ -159,11 +228,21 @@ RayHit Trace(Ray ray)
 {
     RayHit bestHit = CreateRayHit();
     IntersectGroundPlane(ray, bestHit);
-    // spheres
-    uint num, stride;
-    _Spheres.GetDimensions(num, stride);
-    for (uint i = 0; i < num; i++)
+    uint count, stride, i;
+    // Trace ground plane
+    IntersectGroundPlane(ray, bestHit);
+    // Trace spheres
+    _Spheres.GetDimensions(count, stride);
+    for (i = 0; i < count; i++)
+    {
         IntersectSphere(ray, bestHit, _Spheres[i]);
+    }
+    // Trace mesh objects
+    _MeshObjects.GetDimensions(count, stride);
+    for (i = 0; i < count; i++)
+    {
+        IntersectMeshObject(ray, bestHit, _MeshObjects[i]);
+    }
     return bestHit;
 }
 
@@ -210,7 +289,7 @@ float3 Shade(inout Ray ray, RayHit hit)
     {
         ray.energy = 0.0;
         //return 0.0;
-        float skyAlpha = 0.5;
+        float skyAlpha = 1.0;
         float raySampleScale = max(max(abs(ray.dir.x), abs(ray.dir.y)), abs(ray.dir.z));
         return skyAlpha * _SkyboxTexture.SampleLevel(sampler_SkyboxTexture, ray.dir / raySampleScale, 0).xyz;
     }
