@@ -1,0 +1,110 @@
+#pragma kernel CSMain
+
+#include "Tracing/global.hlsl"
+#include "Tracing/structures.hlsl"
+#include "Tracing/random.hlsl"
+#include "Tracing/functions.hlsl"
+#include "Tracing/intersection.hlsl"
+
+bool TraceHit(Ray ray, float targetDist)
+{
+    if (IntersectGroundFast(ray, targetDist, -0.1))
+        return true;
+    uint count, stride, i;
+    _Meshes.GetDimensions(count, stride);
+    for (i = 0; i < count; i++)
+    {
+        if (IntersectMeshObjectFast(ray, _Meshes[i], targetDist))
+            return true;
+    }
+    return false;
+}
+
+HitInfo Trace(Ray ray)
+{
+    HitInfo bestHit = CreateHitInfo();
+    // intersect with ground
+    IntersectGround(ray, bestHit, -0.1);
+    // intersect with mesh objects
+    uint count, stride, i;
+    _Meshes.GetDimensions(count, stride);
+    for (i = 0; i < count; i++)
+    {
+        IntersectMeshObject(ray, bestHit, _Meshes[i]);
+    }
+    return bestHit;
+}
+
+float3 Shade(inout Ray ray, HitInfo hit)
+{
+    if (hit.dist < 1.#INF)
+    {
+        // prepare next ray
+        hit.brdf.diffuse = min(1.0 - hit.brdf.specular, hit.brdf.diffuse);
+        float specChance = dot(hit.brdf.specular, 1.0 / 3.0);
+        float diffChance = dot(hit.brdf.diffuse, 1.0 / 3.0);
+        float sum = specChance + diffChance;
+        specChance /= sum;
+        diffChance /= sum;
+        float random = rand();
+        ray.origin = hit.pos + hit.norm * 0.0001;
+        if (random < specChance)
+        {
+            float alpha = pow(1000.0, (1.0 - hit.brdf.roughness) * (1.0 - hit.brdf.roughness));
+            ray.dir = SampleHemiSphere(reflect(ray.dir, hit.norm), alpha);
+            ray.energy *= (1.0 / specChance) * hit.brdf.specular *
+                saturate(dot(hit.norm, ray.dir) * (alpha + 2.0) / (alpha + 1.0));
+        }
+        else
+        {
+            ray.dir = SampleHemiSphere(hit.norm, 1.0);
+            ray.energy *= (1.0 / diffChance) * hit.brdf.diffuse;
+        }
+        //ray.origin = hit.pos + hit.norm * 0.0001;
+        //ray.dir = reflect(ray.dir, hit.norm);
+        //ray.energy = hit.brdf.specular;
+        // check for directional light
+        //Ray shadowRay = CreateRay(ray.origin, _DirectionalLight.xyz);
+        //if (TraceHit(shadowRay, 1.#INF))
+        //{
+        //    return 0.0;
+        //}
+        return 0.0;
+        //return saturate(dot(hit.norm, _DirectionalLight.xyz)) * _DirectionalLight.w * hit.brdf.diffuse;
+    }
+    else
+    {
+        // hit skybox
+        ray.energy = 0.0;
+        float raySampleScale = max(max(abs(ray.dir.x), abs(ray.dir.y)), abs(ray.dir.z));
+        return _SkyboxTexture.SampleLevel(sampler_SkyboxTexture, ray.dir / raySampleScale, 0).xyz;
+    }
+}
+
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    // save pixel center
+    PixelCenter = float2(id.xy);
+    // get output dimensions
+    uint width, height;
+    _FrameTarget.GetDimensions(width, height);
+    // get new pixel pos
+    float2 uv = (id.xy + _PixelOffset) / float2(width, height) * 2.0 - 1.0;
+    // generate ray from camera
+    Ray ray = CreateCameraRay(uv);
+    // trace ray
+    float3 color = 0.0;
+    for (int i = 0; i < _TraceDepth; i++)
+    {
+        // get best ray hit
+        HitInfo hit = Trace(ray);
+        // accumulate energy (color)
+        color += ray.energy * Shade(ray, hit);
+        // if ray has no energy, stop tracing
+        if(!any(ray.energy))
+            break;
+    }
+    // write to frame target
+    _FrameTarget[id.xy] = float4(color, 1.0);
+}
