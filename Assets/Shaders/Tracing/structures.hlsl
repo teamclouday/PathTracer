@@ -8,12 +8,11 @@ struct Ray
     float3 energy;
 };
 
-struct BRDF
+struct Colors
 {
-    float3 diffuse;
+    float3 albedo;
     float3 specular;
-    float roughness;
-    float fresnel;
+    float3 emission;
 };
 
 struct HitInfo
@@ -21,6 +20,7 @@ struct HitInfo
     float dist;
     float3 pos;
     float3 norm;
-    BRDF brdf;
+    Colors colors;
+    float smoothness;
 };
 #endif

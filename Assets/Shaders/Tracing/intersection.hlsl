@@ -6,27 +6,28 @@
 #include "functions.hlsl"
 
 // intersection with ground
-void IntersectGround(Ray ray, inout HitInfo bestHit, float yVal = 0.0)
-{
-    float t = -(ray.origin.y - yVal) / ray.dir.y;
-    if (t > 0.0 && t < bestHit.dist)
-    {
-        bestHit.dist = t;
-        bestHit.pos = ray.origin + t * ray.dir;
-        bestHit.norm = float3(0.0, 1.0, 0.0);
-        // create a mirror ground brdf
-        bestHit.brdf = CreateBRDF(1.0, 1.0, 0.0);
-    }
-}
+//void IntersectGround(Ray ray, inout HitInfo bestHit, float yVal = 0.0)
+//{
+//    float t = -(ray.origin.y - yVal) / ray.dir.y;
+//    if (t > 0.0 && t < bestHit.dist)
+//    {
+//        bestHit.dist = t;
+//        bestHit.pos = ray.origin + t * ray.dir;
+//        bestHit.norm = float3(0.0, 1.0, 0.0);
+//        // create a mirror ground brdf
+//        bestHit.colors = CreateColors(1.0, 0.0, 0.0);
+//        bestHit.smoothness = 0.0;
+//    }
+//}
 
 // quickly determine if intersect with ground
-bool IntersectGroundFast(Ray ray, float targetDist, float yVal = 0.0)
-{
-    float t = -(ray.origin.y - yVal) / ray.dir.y;
-    if (t > 0.0 && t < targetDist)
-        return true;
-    return false;
-}
+//bool IntersectGroundFast(Ray ray, float targetDist, float yVal = 0.0)
+//{
+//    float t = -(ray.origin.y - yVal) / ray.dir.y;
+//    if (t > 0.0 && t < targetDist)
+//        return true;
+//    return false;
+//}
 
 // test intersection with triangle
 bool IntersectTriangle(Ray ray, float3 v0, float3 v1, float3 v2,
@@ -72,16 +73,15 @@ void IntersectMeshObject(Ray ray, inout HitInfo bestHit, MeshData mesh)
             {
                 float3 hitPos = ray.origin + t * ray.dir;
                 float3 norm = norm1 * u + norm2 * v + norm0 * (1.0 - u - v);
+                //float3 norm = cross(v2 - v0, v1 - v0);
                 //if (!CullFace(norm, ray.origin, hitPos))
                 //{
                 MaterialData mat = _Materials[mesh.materialIdx];
                 bestHit.dist = t;
                 bestHit.pos = hitPos;
                 bestHit.norm = normalize(norm);
-                bestHit.brdf = CreateBRDF(
-                    mat.color,
-                    1.0 - mat.smoothness, mat.metallic
-                );
+                bestHit.colors = CreateColors(mat.color, mat.emission, mat.metallic);
+                bestHit.smoothness = mat.smoothness;
                 //}
             }
         }

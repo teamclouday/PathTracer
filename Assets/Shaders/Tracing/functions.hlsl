@@ -23,15 +23,14 @@ Ray CreateCameraRay(float2 uv)
     return CreateRay(origin, direction);
 }
 
-BRDF CreateBRDF(float3 color, float roughness, float metallic)
+Colors CreateColors(float3 baseColor, float3 emission, float metallic)
 {
-    const float dielectricSpecular = 0.04;
-    BRDF brdf;
-    brdf.diffuse = lerp(color * (1.0 - dielectricSpecular), 0.0, metallic);
-    brdf.specular = lerp(dielectricSpecular, color, metallic);
-    brdf.roughness = roughness * roughness;
-    brdf.fresnel = saturate(1.0 - roughness + dielectricSpecular);
-    return brdf;
+    const float alpha = 0.04;
+    Colors colors;
+    colors.albedo = lerp(baseColor * (1.0 - alpha), 0.0, metallic);
+    colors.specular = lerp(alpha, baseColor, metallic);
+    colors.emission = emission;
+    return colors;
 }
 
 HitInfo CreateHitInfo()
@@ -40,7 +39,8 @@ HitInfo CreateHitInfo()
     hit.dist = 1.#INF;
     hit.pos = 0.0;
     hit.norm = 0.0;
-    hit.brdf = CreateBRDF(0.0, 0.0, 0.0);
+    hit.colors = CreateColors(0.0, 0.0, 0.0);
+    hit.smoothness = 0.0;
     return hit;
 }
 
@@ -51,11 +51,11 @@ bool CullFace(float3 norm, float3 eye, float3 pos)
 }
 
 // create new sample direction in a hemisphere
-float3 SampleHemiSphere(float3 norm, float alpha=1.0)
+float3 SampleHemisphere1(float3 norm, float alpha = 0.0)
 {
     float cosTheta = pow(rand(), 1.0 / (1.0 + alpha));
     float sinTheta = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
-    float phi = 2 * PI * rand();
+    float phi = 2.0 * PI * rand();
     float3 tangentSpaceDir = float3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
     // from tangent space to world space
     float3 helper = float3(1, 0, 0);
@@ -65,5 +65,28 @@ float3 SampleHemiSphere(float3 norm, float alpha=1.0)
     float3 binormal = normalize(cross(norm, tangent));
     // get new direction
     return mul(tangentSpaceDir, float3x3(tangent, binormal, norm));
+}
+
+// reference: https://github.com/LWJGL/lwjgl3-demos/blob/main/res/org/lwjgl/demo/opengl/raytracing/randomCommon.glsl
+float3 SampleHemisphere2(float3 norm)
+{
+    float angle = rand() * 2.0 * PI;
+    float u = rand() * 2.0 - 1.0;
+    float sqrtMinusU2 = sqrt(1.0 - u * u);
+    float3 v = float3(sqrtMinusU2 * cos(angle), sqrtMinusU2 * sin(angle), u);
+    return v * sign(dot(v, norm));
+}
+
+float3 SampleHemisphere3(float3 norm, float alpha = 0.0)
+{
+    float3 randomVec = float3(rand(), rand(), rand());
+    float r = pow(randomVec.x, 1.0 / (1.0 + alpha));
+    float angle = randomVec.y * 2.0 * PI;
+    float sr = sqrt(1.0 - r * r);
+    float3 ph = float3(sr * cos(angle), sr * sin(angle), r);
+    float3 tangent = normalize(randomVec * 2.0 - 1.0);
+    float3 bitangent = cross(tangent, norm);
+    tangent = cross(bitangent, norm);
+    return mul(ph, float3x3(tangent, bitangent, norm));
 }
 #endif

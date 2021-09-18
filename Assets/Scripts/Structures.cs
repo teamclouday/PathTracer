@@ -18,10 +18,11 @@ public struct MeshData
 public struct MaterialData
 {
     public Vector3 Color;
+    public Vector3 Emission;
     public float Smoothness;
     public float Metallic;
 
-    public static int TypeSize = sizeof(float)*3+sizeof(float)*2;
+    public static int TypeSize = sizeof(float)*3*2+sizeof(float)*2;
 }
 
 /// <summary>
@@ -104,7 +105,8 @@ public class ObjectManager
             {
                 materials.Add(new MaterialData()
                 {
-                    Color = new Vector3(mat.color.r, mat.color.g, mat.color.b),
+                    Color = ColorToVector(mat.color),
+                    Emission = mat.IsKeywordEnabled("_EMISSION") ? ColorToVector(mat.GetColor("_EmissionColor")) : Vector3.zero,
                     Metallic = mat.GetFloat("_Metallic"), // here I assume it is standard unity shader
                     Smoothness = mat.GetFloat("_Glossiness")
                 });
@@ -163,5 +165,10 @@ public class ObjectManager
         if (VertexBuffer != null) VertexBuffer.Release();
         if (NormalBuffer != null) NormalBuffer.Release();
         if (MaterialBuffer != null) MaterialBuffer.Release();
+    }
+
+    private static Vector3 ColorToVector(Color color)
+    {
+        return new Vector3(color.r, color.g, color.b);
     }
 }

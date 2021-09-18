@@ -12,9 +12,6 @@ float4x4 _CameraProjInv;
 TextureCube<float4> _SkyboxTexture;
 SamplerState sampler_SkyboxTexture;
 
-// directional light
-float4 _DirectionalLight;
-
 // random offset in pixel
 float2 _PixelOffset;
 
@@ -37,6 +34,7 @@ StructuredBuffer<MeshData> _Meshes;
 struct MaterialData
 {
     float3 color;
+    float3 emission;
     float metallic;
     float smoothness;
 };
@@ -50,5 +48,5 @@ StructuredBuffer<float3> _Normals;
 float2 PixelCenter;
 
 // define PI value
-const float PI = 3.141592653589793;
+const float PI = 3.14159265358979323846;
 #endif

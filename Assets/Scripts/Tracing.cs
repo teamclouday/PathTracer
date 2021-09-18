@@ -11,9 +11,6 @@ public class Tracing : MonoBehaviour
     [SerializeField]
     Texture SkyboxTexture;
 
-    [SerializeField]
-    Light DirectionalLight;
-
     [SerializeField, Range(1, 10)]
     int TraceDepth = 5;
 
@@ -24,8 +21,6 @@ public class Tracing : MonoBehaviour
 
     private uint sampleCount;
     private Material collectMaterial;
-
-    private Vector4 directionalLightInfo;
 
     private int dispatchGroupX, dispatchGroupY;
 
@@ -68,8 +63,6 @@ public class Tracing : MonoBehaviour
         RayTracingShader.SetInt("_TraceDepth", TraceDepth);
         // random seed
         RayTracingShader.SetFloat("_Seed", Random.value);
-        // directional light info
-        RayTracingShader.SetVector("_DirectionalLight", directionalLightInfo);
         // set objects info
         if (ObjectManager.MeshBuffer != null) RayTracingShader.SetBuffer(0, "_Meshes", ObjectManager.MeshBuffer);
         if (ObjectManager.VertexBuffer != null) RayTracingShader.SetBuffer(0, "_Vertices", ObjectManager.VertexBuffer);
@@ -123,8 +116,6 @@ public class Tracing : MonoBehaviour
         // set collect material
         if (collectMaterial == null)
             collectMaterial = new Material(Shader.Find("Hidden/Collect"));
-        // prepare directional light
-        UpdateDirectionalLightInfo();
     }
 
     private void Start()
@@ -143,25 +134,9 @@ public class Tracing : MonoBehaviour
             sampleCount = 0;
             transform.hasChanged = false;
         }
-        // if directional light has changed, resample
-        if (DirectionalLight.transform.hasChanged)
-        {
-            UpdateDirectionalLightInfo();
-            sampleCount = 0;
-            DirectionalLight.transform.hasChanged = false;
-        }
         // press ESC to exit program
         if(Input.GetKeyDown(KeyCode.Escape))
             Application.Quit();
-    }
-
-    private void UpdateDirectionalLightInfo()
-    {
-        Vector3 lightDir = DirectionalLight.transform.forward;
-        directionalLightInfo = new Vector4(
-            -lightDir.x, -lightDir.y,
-            -lightDir.z, DirectionalLight.intensity
-        );
     }
 
     private void OnDestroy()

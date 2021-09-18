@@ -6,10 +6,9 @@
 #include "Tracing/functions.hlsl"
 #include "Tracing/intersection.hlsl"
 
+// trace a ray and returns hit immediately (for shadow rays)
 bool TraceHit(Ray ray, float targetDist)
 {
-    if (IntersectGroundFast(ray, targetDist, -0.1))
-        return true;
     uint count, stride, i;
     _Meshes.GetDimensions(count, stride);
     for (i = 0; i < count; i++)
@@ -20,11 +19,10 @@ bool TraceHit(Ray ray, float targetDist)
     return false;
 }
 
+// trace a ray and detect nearest hit
 HitInfo Trace(Ray ray)
 {
     HitInfo bestHit = CreateHitInfo();
-    // intersect with ground
-    IntersectGround(ray, bestHit, -0.1);
     // intersect with mesh objects
     uint count, stride, i;
     _Meshes.GetDimensions(count, stride);
@@ -35,42 +33,38 @@ HitInfo Trace(Ray ray)
     return bestHit;
 }
 
+// return shading info based on ray and hitinfo
 float3 Shade(inout Ray ray, HitInfo hit)
 {
     if (hit.dist < 1.#INF)
     {
+        //return hit.norm * 0.5 + 0.5; // debug normal
         // prepare next ray
-        hit.brdf.diffuse = min(1.0 - hit.brdf.specular, hit.brdf.diffuse);
-        float specChance = dot(hit.brdf.specular, 1.0 / 3.0);
-        float diffChance = dot(hit.brdf.diffuse, 1.0 / 3.0);
+        ray.origin = hit.pos + hit.norm * 1e-8;
+        //ray.dir = SampleHemisphere3(hit.norm, pow(1000.0, 0.8 * 0.8));
+        //ray.energy *= 2.0 * hit.colors.albedo * dot(ray.dir, hit.norm);
+        //hit.colors.albedo = min(hit.colors.albedo, 1.0 - hit.colors.specular);
+        float specChance = dot(hit.colors.specular, 0.333333333333);
+        float diffChance = dot(hit.colors.albedo, 0.33333333333);
         float sum = specChance + diffChance;
         specChance /= sum;
         diffChance /= sum;
         float random = rand();
-        ray.origin = hit.pos + hit.norm * 0.0001;
         if (random < specChance)
         {
-            float alpha = pow(1000.0, (1.0 - hit.brdf.roughness) * (1.0 - hit.brdf.roughness));
-            ray.dir = SampleHemiSphere(reflect(ray.dir, hit.norm), alpha);
-            ray.energy *= (1.0 / specChance) * hit.brdf.specular *
+            float alpha = pow(1000.0, hit.smoothness * hit.smoothness);
+            ray.dir = normalize(SampleHemisphere3(reflect(ray.dir, hit.norm), alpha));
+            ray.energy *= 1.0 / specChance * hit.colors.specular *
                 saturate(dot(hit.norm, ray.dir) * (alpha + 2.0) / (alpha + 1.0));
+            //ray.dir = reflect(ray.dir, hit.norm);
+            //ray.energy *= 1.0 / specChance * hit.colors.specular * saturate(dot(hit.norm, ray.dir));
         }
         else
         {
-            ray.dir = SampleHemiSphere(hit.norm, 1.0);
-            ray.energy *= (1.0 / diffChance) * hit.brdf.diffuse;
+            ray.dir = normalize(SampleHemisphere3(hit.norm, 1.0));
+            ray.energy *= 1.0 / diffChance * 2.0 * hit.colors.albedo * saturate(dot(hit.norm, ray.dir));
         }
-        //ray.origin = hit.pos + hit.norm * 0.0001;
-        //ray.dir = reflect(ray.dir, hit.norm);
-        //ray.energy = hit.brdf.specular;
-        // check for directional light
-        //Ray shadowRay = CreateRay(ray.origin, _DirectionalLight.xyz);
-        //if (TraceHit(shadowRay, 1.#INF))
-        //{
-        //    return 0.0;
-        //}
-        return 0.0;
-        //return saturate(dot(hit.norm, _DirectionalLight.xyz)) * _DirectionalLight.w * hit.brdf.diffuse;
+        return hit.colors.emission;
     }
     else
     {
