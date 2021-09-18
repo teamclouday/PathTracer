@@ -10,6 +10,16 @@ Compiled executables available [here](https://github.com/teamclouday/PathTracer/
 
 <img src="Images/basic.png" width="600" alt="basic">
 
+### Cornell Box
+
+Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/cornellbox)
+
+Improved hemisphere sampling adapted from [lwjgl3-demos](https://github.com/LWJGL/lwjgl3-demos/blob/main/res/org/lwjgl/demo/opengl/raytracing/randomCommon.glsl).  
+A better random value generator.  
+Support unity material `_EMISSION`, `_EmissionColor`, `_Metallic`, `_Glossiness` values.  
+
+<img src="Images/cornellbox.png" width="600" alt="cornellbox">
+
 ------
 
 Reference:
