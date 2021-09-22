@@ -38,6 +38,27 @@ Looking forward to further optimize it.
 
 <img src="Images/cornellboxbunny.png" width="600" alt="cornellboxbunny">
 
+### Dragon
+
+Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/dragon)
+
+Added reflection & refraction workflow for transparent materials.  
+In Unity, if a material (standard shader) render mode is not opaque, it will go through this workflow. In this case, `Smoothness` is translated to isotropic coefficient:
+```
+k => k * 2.0 + 1.0
+```
+Scene Info:
+```
+BVH tree nodes count = 1735017
+Total vertices = 439077
+Total indices = 2614194
+Total normals = 439077
+Total materials = 3
+```
+Loading time is very slow. Need to optimize BVH tree construction.
+
+<img src="Images/dragon.png" width="600" alt="dragon">
+
 ------
 
 Reference:
