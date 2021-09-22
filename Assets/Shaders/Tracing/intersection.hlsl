@@ -17,6 +17,7 @@ void IntersectGround(Ray ray, inout HitInfo bestHit, float yVal = 0.0)
         // create a mirror ground brdf
         bestHit.colors = CreateColors(1.0, 0.0, 0.0);
         bestHit.smoothness = 0.0;
+        bestHit.mode = 0.0;
     }
 }
 
@@ -122,6 +123,7 @@ void IntersectMeshObject(Ray ray, inout HitInfo bestHit, MeshData mesh)
                 bestHit.norm = normalize(norm);
                 bestHit.colors = CreateColors(mat.color, mat.emission, mat.metallic);
                 bestHit.smoothness = mat.smoothness;
+                bestHit.mode = mat.mode;
                 //}
             }
         }
@@ -182,7 +184,7 @@ void InersectBVHTree(Ray ray, inout HitInfo bestHit, int startIdx)
         {
             if(leaf)
             {
-                for (faceIdx = node.faceStartIdx; faceIdx < node.faceStartIdx + node.faceCount; faceIdx++)
+                for (faceIdx = node.faceStartIdx; faceIdx < node.faceEndIdx; faceIdx++)
                 {
                     int i = faceIdx * 3;
                     float3 v0 = _Vertices[_Indices[i]];
@@ -204,6 +206,7 @@ void InersectBVHTree(Ray ray, inout HitInfo bestHit, int startIdx)
                             bestHit.norm = normalize(norm);
                             bestHit.colors = CreateColors(mat.color, mat.emission, mat.metallic);
                             bestHit.smoothness = mat.smoothness;
+                            bestHit.mode = mat.mode;
                         }
                     }
                 }
@@ -227,7 +230,7 @@ void InersectBVHTreeTest(Ray ray, inout HitInfo bestHit, int startIdx)
         NodeInfo node = _Nodes[idx];
         if(node.faceStartIdx >= 0)
         {
-            for (int faceIdx = node.faceStartIdx; faceIdx < node.faceStartIdx + node.faceCount; faceIdx++)
+            for (int faceIdx = node.faceStartIdx; faceIdx < node.faceEndIdx; faceIdx++)
             {
                 int i = faceIdx * 3;
                 float3 v0 = _Vertices[_Indices[i]];
@@ -249,6 +252,7 @@ void InersectBVHTreeTest(Ray ray, inout HitInfo bestHit, int startIdx)
                         bestHit.norm = normalize(norm);
                         bestHit.colors = CreateColors(mat.color, mat.emission, mat.metallic);
                         bestHit.smoothness = mat.smoothness;
+                        bestHit.mode = mat.mode;
                     }
                 }
             }
@@ -278,7 +282,7 @@ bool IntersectBVHTreeFast(Ray ray, int startIdx, float targetDist)
         {
             if (leaf)
             {
-                for (faceIdx = node.faceStartIdx; faceIdx < node.faceStartIdx + node.faceCount; faceIdx++)
+                for (faceIdx = node.faceStartIdx; faceIdx < node.faceEndIdx; faceIdx++)
                 {
                     int i = faceIdx * 3;
                     float3 v0 = _Vertices[_Indices[i]];

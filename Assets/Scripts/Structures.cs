@@ -24,8 +24,9 @@ public struct MaterialData
     public Vector3 Emission;
     public float Smoothness;
     public float Metallic;
+    public float RenderMode;
 
-    public static int TypeSize = sizeof(float)*3*2+sizeof(float)*2;
+    public static int TypeSize = sizeof(float)*3*2+sizeof(float)*3;
 }
 
 /// <summary>
@@ -36,7 +37,7 @@ public struct NodeInfo
     public Vector3 BoundMax;
     public Vector3 BoundMin;
     public int FaceStartIdx;
-    public int FaceCount;
+    public int FaceEndIdx;
     public int MaterialIdx;
     public int ChildIdx;
 
@@ -105,8 +106,10 @@ public class ObjectManager
         materials.Add(new MaterialData()
         {
             Color = new Vector3(1.0f, 1.0f, 1.0f), // white color by default
+            Emission = Vector3.zero,
             Metallic = 0.0f,
-            Smoothness = 0.0f
+            Smoothness = 0.0f,
+            RenderMode = 0
         });
         // init material info count (should be same count as indices)
         List<int> materialInfo = new List<int>();
@@ -126,7 +129,8 @@ public class ObjectManager
                     Color = ColorToVector(mat.color),
                     Emission = mat.IsKeywordEnabled("_EMISSION") ? ColorToVector(mat.GetColor("_EmissionColor")) : Vector3.zero,
                     Metallic = mat.GetFloat("_Metallic"), // here I assume it is standard unity shader
-                    Smoothness = mat.GetFloat("_Glossiness")
+                    Smoothness = mat.GetFloat("_Glossiness"),
+                    RenderMode = mat.GetFloat("_Mode") // 0 for opaque, > 0 for transparent
                 });
             }
             // process mesh data

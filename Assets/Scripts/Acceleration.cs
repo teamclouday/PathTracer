@@ -93,7 +93,7 @@ public class BVHNode
     public BVHNode RightChild;
     public int SplitAxis;
     public int FaceStart;
-    public int FaceCount;
+    public int FaceEnd;
 
     public bool IsLeaf()
     {
@@ -109,7 +109,7 @@ public class BVHNode
             RightChild = null,
             SplitAxis = -1,
             FaceStart = start,
-            FaceCount = count
+            FaceEnd = start + count
         };
         return node;
     }
@@ -123,7 +123,7 @@ public class BVHNode
             RightChild = nodeRight,
             SplitAxis = splitAxis,
             FaceStart = -1,
-            FaceCount = 0
+            FaceEnd = -1
         };
         return node;
     }
@@ -243,7 +243,7 @@ public class BVH
                 BoundMax = node.Bounds.pMax,
                 BoundMin = node.Bounds.pMin,
                 FaceStartIdx = node.FaceStart,
-                FaceCount = node.FaceCount,
+                FaceEndIdx = node.FaceEnd,
                 MaterialIdx = node.FaceStart >= 0 ? materialInfo[OrderedFaceId[node.FaceStart]] : 0,
                 ChildIdx = node.FaceStart >= 0 ? -1 : nodes.Count + result.Count + 1
             });

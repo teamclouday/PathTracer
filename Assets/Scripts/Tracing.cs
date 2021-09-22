@@ -18,6 +18,7 @@ public class Tracing : MonoBehaviour
     [SerializeField, Range(1, 10)]
     int TraceDepth = 5;
 
+    public static bool ComputeLock = false;
 
     private RenderTexture frameTarget;
     private RenderTexture frameConverged;
@@ -69,7 +70,7 @@ public class Tracing : MonoBehaviour
         // set directional light
         RayTracingShader.SetVector("_DirectionalLight", directionalLightInfo);
         // trace depth
-        RayTracingShader.SetInt("_TraceDepth", TraceDepth);
+        RayTracingShader.SetInt("_TraceDepth", ComputeLock ? 1 : TraceDepth);
         // random seed
         RayTracingShader.SetFloat("_Seed", Random.value);
         // set objects info

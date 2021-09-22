@@ -47,9 +47,14 @@ public class CameraControl : MonoBehaviour
         {
             _mouseDown = true;
             _mousePos = Input.mousePosition;
+            Tracing.ComputeLock = true;
         }
         // check for click and drag
-        if (Input.GetMouseButtonUp(0)) _mouseDown = false;
+        if (Input.GetMouseButtonUp(0))
+        {
+            _mouseDown = false;
+            Tracing.ComputeLock = false;
+        }
         if(_mouseDown)
         {
             Vector3 mousePos = Input.mousePosition;

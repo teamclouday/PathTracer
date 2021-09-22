@@ -8,5 +8,6 @@ UserSettings/*
 .vsconfig
 *.csproj
 *.sln
+*.zip
 
 Assets/Models/breakfast_room**

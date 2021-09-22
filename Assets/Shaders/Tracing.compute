@@ -43,30 +43,59 @@ float3 Shade(inout Ray ray, HitInfo hit)
     if (hit.dist < 1.#INF)
     {
         //return hit.norm * 0.5 + 0.5; // debug normal
-        // prepare next ray
-        ray.origin = hit.pos + hit.norm * 1e-8;
+
         //ray.dir = SampleHemisphere3(hit.norm, pow(1000.0, 0.8 * 0.8));
         //ray.energy *= 2.0 * hit.colors.albedo * dot(ray.dir, hit.norm);
         //hit.colors.albedo = min(hit.colors.albedo, 1.0 - hit.colors.specular);
-        float specChance = dot(hit.colors.specular, 0.333333333333);
-        float diffChance = dot(hit.colors.albedo, 0.33333333333);
-        float sum = specChance + diffChance;
-        specChance /= sum;
-        diffChance /= sum;
-        float random = rand();
-        if (random < specChance)
+        if(hit.mode > 0.0)
         {
-            float alpha = pow(1000.0, hit.smoothness * hit.smoothness);
-            ray.dir = normalize(SampleHemisphere3(reflect(ray.dir, hit.norm), alpha));
-            ray.energy *= 1.0 / specChance * hit.colors.specular *
-                saturate(dot(hit.norm, ray.dir) * (alpha + 2.0) / (alpha + 1.0));
-            //ray.dir = reflect(ray.dir, hit.norm);
-            //ray.energy *= 1.0 / specChance * hit.colors.specular * saturate(dot(hit.norm, ray.dir));
+            // transparent workflow
+            float random = rand();
+            float ior = hit.smoothness * 2.0 + 1.0;
+            float kr = saturate(Fresnel(ray.dir, hit.norm, ior));
+            float outside = dot(ray.dir, hit.norm);
+            ray.origin = hit.pos + sign(outside) * hit.norm * 1e-5;
+            if (random < kr)
+            {
+                ray.dir = normalize(SampleHemisphere3(reflect(ray.dir, hit.norm), 10000.0));
+                //ray.dir = normalize(reflect(ray.dir, hit.norm));
+                float coeff = clamp(1.0 / kr, 0.01, 0.99);
+                ray.energy *= coeff * hit.colors.specular * saturate(dot(hit.norm, ray.dir));
+            }
+            else
+            {
+                ray.dir = normalize(SampleHemisphere3(refract(ray.dir, hit.norm, 1.0 / ior), 10000.0));;
+                //ray.dir = normalize(refract(ray.dir, hit.norm, 1.0 / ior));
+                float coeff = clamp(1.0 / (1.0 - kr), 0.01, 0.99);
+                ray.energy *= coeff * 2.0 * hit.colors.albedo * saturate(dot(-hit.norm, ray.dir));
+            }
+            //ray.dir = normalize(refract(ray.dir, hit.norm, 1.0 / ior));
+            //ray.energy *= 2.0 * hit.colors.albedo;
         }
         else
         {
-            ray.dir = normalize(SampleHemisphere3(hit.norm, 1.0));
-            ray.energy *= 1.0 / diffChance * 2.0 * hit.colors.albedo * saturate(dot(hit.norm, ray.dir));
+            // opaque workflow
+            ray.origin = hit.pos + hit.norm * 1e-5;
+            float specChance = dot(hit.colors.specular, 0.333333333333);
+            float diffChance = dot(hit.colors.albedo, 0.33333333333);
+            float sum = specChance + diffChance;
+            specChance /= sum;
+            diffChance /= sum;
+            float random = rand();
+            if (random < specChance)
+            {
+                float alpha = pow(10000.0, hit.smoothness * hit.smoothness);
+                ray.dir = normalize(SampleHemisphere3(reflect(ray.dir, hit.norm), alpha));
+                ray.energy *= 1.0 / specChance * hit.colors.specular *
+                saturate(dot(hit.norm, ray.dir) * (alpha + 2.0) / (alpha + 1.0));
+            //ray.dir = reflect(ray.dir, hit.norm);
+            //ray.energy *= 1.0 / specChance * hit.colors.specular * saturate(dot(hit.norm, ray.dir));
+            }
+            else
+            {
+                ray.dir = normalize(SampleHemisphere3(hit.norm, 1.0));
+                ray.energy *= 1.0 / diffChance * 2.0 * hit.colors.albedo * saturate(dot(hit.norm, ray.dir));
+            }
         }
         Ray shadowRay = CreateRay(hit.pos, _DirectionalLight.xyz);
         if (TraceHit(shadowRay, 1.#INF))
@@ -74,6 +103,7 @@ float3 Shade(inout Ray ray, HitInfo hit)
             return hit.colors.emission;
         }
         return hit.colors.emission + saturate(dot(hit.norm, _DirectionalLight.xyz)) * _DirectionalLight.w * hit.colors.albedo;
+        //return hit.colors.emission;
     }
     else
     {

@@ -39,7 +39,7 @@ struct NodeInfo
     float3 boundMax;
     float3 boundMin;
     int faceStartIdx;
-    int faceCount;
+    int faceEndIdx;
     int materialIdx;
     int childIdx;
 };
@@ -51,6 +51,7 @@ struct MaterialData
     float3 emission;
     float metallic;
     float smoothness;
+    float mode;
 };
 StructuredBuffer<MaterialData> _Materials;
 

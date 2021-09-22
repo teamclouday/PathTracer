@@ -89,4 +89,34 @@ float3 SampleHemisphere3(float3 norm, float alpha = 0.0)
     tangent = normalize(cross(bitangent, norm));
     return mul(ph, float3x3(tangent, bitangent, norm));
 }
+
+// reference: https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/reflection-refraction-fresnel
+float Fresnel(float3 dir, float3 norm, float ior)
+{
+    float cosi = clamp(dot(dir, norm), -1.0, 1.0);
+    float etai, etat;
+    if(cosi > 0.0)
+    {
+        etai = ior;
+        etat = 1.0;
+    }
+    else
+    {
+        etai = 1.0;
+        etat = ior;
+    }
+    float sint = etai / etat * sqrt(max(0.0, 1.0 - cosi * cosi));
+    if(sint >= 1.0)
+    {
+        return 1.0;
+    }
+    else
+    {
+        float cost = sqrt(max(0.0, 1.0 - sint * sint));
+        cosi = abs(cosi);
+        float Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost));
+        float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost));
+        return (Rs * Rs + Rp * Rp) / 2;
+    }
+}
 #endif

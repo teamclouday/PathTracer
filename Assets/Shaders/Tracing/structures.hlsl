@@ -22,5 +22,6 @@ struct HitInfo
     float3 norm;
     Colors colors;
     float smoothness;
+    float mode;
 };
 #endif
