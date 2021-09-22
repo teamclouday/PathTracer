@@ -20,6 +20,24 @@ Support unity material `_EMISSION`, `_EmissionColor`, `_Metallic`, `_Glossiness`
 
 <img src="Images/cornellbox.png" width="600" alt="cornellbox">
 
+### Cornell Box & Bunny
+
+Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/cornellboxbunny)
+
+Added basic BVH (bounding volume hierarchy).  
+Scene Info:
+```
+BVH tree nodes count = 290135
+Total vertices = 100277
+Total indices = 435474
+Total normals = 100277
+Total materials = 10
+```
+RTX2060S has about 18fps at default view position in unity editor mode  
+Looking forward to further optimize it.
+
+<img src="Images/cornellboxbunny.png" width="600" alt="cornellboxbunny">
+
 ------
 
 Reference:
