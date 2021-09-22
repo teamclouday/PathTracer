@@ -61,6 +61,22 @@ Loading time is very slow. Need to optimize BVH tree construction.
 
 ------
 
+### Controls
+
+```
+W -> camera forward
+S -> camera backward
+A -> camera left
+D -> camera right
+ESC -> quit application
+Left click and drag -> camera look around
+Scroll up -> move forward
+Scroll down -> move backward
+Left CTRL + X -> save screenshot in data folder
+```
+
+------
+
 Reference:
 
 [GPU Ray Tracing in Unity – Part 1](http://blog.three-eyed-games.com/2018/05/03/gpu-ray-tracing-in-unity-part-1/)  
@@ -69,3 +85,4 @@ Reference:
 [Physically Based Rendering](https://www.pbr-book.org/3ed-2018/contents)  
 [RadeonRays_SDK](https://github.com/GPUOpen-LibrariesAndSDKs/RadeonRays_SDK)  
 [Fast-BVH](https://github.com/brandonpelfrey/Fast-BVH)  
+[GLSL-PathTracer](https://github.com/knightcrawler25/GLSL-PathTracer)  
