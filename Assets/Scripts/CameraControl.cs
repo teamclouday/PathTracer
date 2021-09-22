@@ -24,6 +24,7 @@ public class CameraControl : MonoBehaviour
     {
         _pos = transform.position;
         _dir = Vector3.forward;
+        UpdateDir();
         UpdateCamera();
     }
 

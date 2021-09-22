@@ -10,12 +10,14 @@
 bool TraceHit(Ray ray, float targetDist)
 {
     uint count, stride, i;
-    _Meshes.GetDimensions(count, stride);
-    for (i = 0; i < count; i++)
-    {
-        if (IntersectMeshObjectFast(ray, _Meshes[i], targetDist))
-            return true;
-    }
+    //_Meshes.GetDimensions(count, stride);
+    //for (i = 0; i < count; i++)
+    //{
+    //    if (IntersectMeshObjectFast(ray, _Meshes[i], targetDist))
+    //        return true;
+    //}
+    if (IntersectBVHTreeFast(ray, 0, targetDist))
+        return true;
     return false;
 }
 
@@ -24,12 +26,14 @@ HitInfo Trace(Ray ray)
 {
     HitInfo bestHit = CreateHitInfo();
     // intersect with mesh objects
-    uint count, stride, i;
-    _Meshes.GetDimensions(count, stride);
-    for (i = 0; i < count; i++)
-    {
-        IntersectMeshObject(ray, bestHit, _Meshes[i]);
-    }
+    //uint count, stride, i;
+    //_Meshes.GetDimensions(count, stride);
+    //for (i = 0; i < count; i++)
+    //{
+    //    IntersectMeshObject(ray, bestHit, _Meshes[i]);
+    //}
+    // intersect with BVH tree
+    InersectBVHTree(ray, bestHit, 0);
     return bestHit;
 }
 
@@ -64,7 +68,12 @@ float3 Shade(inout Ray ray, HitInfo hit)
             ray.dir = normalize(SampleHemisphere3(hit.norm, 1.0));
             ray.energy *= 1.0 / diffChance * 2.0 * hit.colors.albedo * saturate(dot(hit.norm, ray.dir));
         }
-        return hit.colors.emission;
+        Ray shadowRay = CreateRay(hit.pos, _DirectionalLight.xyz);
+        if (TraceHit(shadowRay, 1.#INF))
+        {
+            return hit.colors.emission;
+        }
+        return hit.colors.emission + saturate(dot(hit.norm, _DirectionalLight.xyz)) * _DirectionalLight.w * hit.colors.albedo;
     }
     else
     {

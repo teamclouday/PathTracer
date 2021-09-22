@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.IO;
 
 /// <summary>
 /// Main body of ray tracing
@@ -11,8 +12,12 @@ public class Tracing : MonoBehaviour
     [SerializeField]
     Texture SkyboxTexture;
 
+    [SerializeField]
+    Light DirectionalLight;
+
     [SerializeField, Range(1, 10)]
     int TraceDepth = 5;
+
 
     private RenderTexture frameTarget;
     private RenderTexture frameConverged;
@@ -23,6 +28,8 @@ public class Tracing : MonoBehaviour
     private Material collectMaterial;
 
     private int dispatchGroupX, dispatchGroupY;
+
+    private Vector4 directionalLightInfo;
 
     private void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
@@ -59,16 +66,20 @@ public class Tracing : MonoBehaviour
         RayTracingShader.SetTexture(0, "_SkyboxTexture", SkyboxTexture);
         // random pixel offset
         RayTracingShader.SetVector("_PixelOffset", new Vector2(Random.value, Random.value));
+        // set directional light
+        RayTracingShader.SetVector("_DirectionalLight", directionalLightInfo);
         // trace depth
         RayTracingShader.SetInt("_TraceDepth", TraceDepth);
         // random seed
         RayTracingShader.SetFloat("_Seed", Random.value);
         // set objects info
-        if (ObjectManager.MeshBuffer != null) RayTracingShader.SetBuffer(0, "_Meshes", ObjectManager.MeshBuffer);
+        //if (ObjectManager.MeshBuffer != null) RayTracingShader.SetBuffer(0, "_Meshes", ObjectManager.MeshBuffer);
         if (ObjectManager.VertexBuffer != null) RayTracingShader.SetBuffer(0, "_Vertices", ObjectManager.VertexBuffer);
         if (ObjectManager.IndexBuffer != null) RayTracingShader.SetBuffer(0, "_Indices", ObjectManager.IndexBuffer);
         if (ObjectManager.NormalBuffer != null) RayTracingShader.SetBuffer(0, "_Normals", ObjectManager.NormalBuffer);
         if (ObjectManager.MaterialBuffer != null) RayTracingShader.SetBuffer(0, "_Materials", ObjectManager.MaterialBuffer);
+        if (ObjectManager.NodeBuffer != null) RayTracingShader.SetBuffer(0, "_Nodes", ObjectManager.NodeBuffer);
+    
     }
 
     private void ValidateTextures()
@@ -116,6 +127,8 @@ public class Tracing : MonoBehaviour
         // set collect material
         if (collectMaterial == null)
             collectMaterial = new Material(Shader.Find("Hidden/Collect"));
+        // set directional light info
+        UpdateDirectionalLight();
     }
 
     private void Start()
@@ -134,9 +147,24 @@ public class Tracing : MonoBehaviour
             sampleCount = 0;
             transform.hasChanged = false;
         }
+        // check for directional light
+        if(DirectionalLight.transform.hasChanged)
+        {
+            sampleCount = 0;
+            UpdateDirectionalLight();
+            DirectionalLight.transform.hasChanged = false;
+        }
         // press ESC to exit program
         if(Input.GetKeyDown(KeyCode.Escape))
             Application.Quit();
+        // press ctrl + X to save screenshot
+        if(Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.X))
+        {
+            Debug.Log("Screenshot: " + Path.Combine(Application.dataPath, "ScreenShot_S" + sampleCount + ".png"));
+            ScreenCapture.CaptureScreenshot(
+                Path.Combine(Application.dataPath, "ScreenShot_S" + sampleCount + ".png")
+            );
+        }
     }
 
     private void OnDestroy()
@@ -144,5 +172,14 @@ public class Tracing : MonoBehaviour
         ObjectManager.Destroy();
         if(frameTarget != null) frameTarget.Release();
         if(frameConverged != null) frameConverged.Release();
+    }
+
+    private void UpdateDirectionalLight()
+    {
+        Vector3 dir = DirectionalLight.transform.forward;
+        directionalLightInfo = new Vector4(
+            -dir.x, -dir.y, -dir.z,
+            DirectionalLight.intensity
+        );
     }
 }

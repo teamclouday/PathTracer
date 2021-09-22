@@ -15,6 +15,9 @@ SamplerState sampler_SkyboxTexture;
 // random offset in pixel
 float2 _PixelOffset;
 
+// directional light info
+float4 _DirectionalLight;
+
 // trace depth
 int _TraceDepth;
 
@@ -24,12 +27,23 @@ float _Seed;
 // object info
 struct MeshData
 {
-    float4x4 localToWorld;
+    //float4x4 localToWorld;
     int indicesStart;
     int indicesCount;
     int materialIdx;
 };
-StructuredBuffer<MeshData> _Meshes;
+//StructuredBuffer<MeshData> _Meshes;
+
+struct NodeInfo
+{
+    float3 boundMax;
+    float3 boundMin;
+    int faceStartIdx;
+    int faceCount;
+    int materialIdx;
+    int childIdx;
+};
+StructuredBuffer<NodeInfo> _Nodes;
 
 struct MaterialData
 {

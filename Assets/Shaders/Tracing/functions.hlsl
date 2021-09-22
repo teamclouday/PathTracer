@@ -85,8 +85,8 @@ float3 SampleHemisphere3(float3 norm, float alpha = 0.0)
     float sr = sqrt(1.0 - r * r);
     float3 ph = float3(sr * cos(angle), sr * sin(angle), r);
     float3 tangent = normalize(randomVec * 2.0 - 1.0);
-    float3 bitangent = cross(tangent, norm);
-    tangent = cross(bitangent, norm);
+    float3 bitangent = normalize(cross(tangent, norm));
+    tangent = normalize(cross(bitangent, norm));
     return mul(ph, float3x3(tangent, bitangent, norm));
 }
 #endif
