@@ -1,6 +1,19 @@
 #ifndef TRACER_STRUCTURES
 #define TRACER_STRUCTURES
 
+struct Camera
+{
+    float fov;
+    float focalDist;
+    float aperture;
+    float ratio;
+    float2 offset;
+    float3 forward;
+    float3 right;
+    float3 up;
+    float3 pos;
+};
+
 struct Ray
 {
     float3 origin;

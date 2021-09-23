@@ -5,6 +5,21 @@
 #include "structures.hlsl"
 #include "random.hlsl"
 
+Camera CreateCamera()
+{
+    Camera camera;
+    camera.fov = _CameraInfo.x;
+    camera.focalDist = _CameraInfo.y;
+    camera.aperture = _CameraInfo.z;
+    camera.ratio = _CameraInfo.w;
+    camera.offset = _PixelOffset;
+    camera.forward = _CameraForward;
+    camera.right = _CameraRight;
+    camera.up = _CameraUp;
+    camera.pos = _CameraPos;
+    return camera;
+}
+
 Ray CreateRay(float3 origin, float3 direction)
 {
     Ray ray;
@@ -14,13 +29,33 @@ Ray CreateRay(float3 origin, float3 direction)
     return ray;
 }
 
-Ray CreateCameraRay(float2 uv)
+Ray CreateCameraRay(Camera camera, float2 uv, float2 dims)
 {
-    float3 origin = mul(_CameraToWorld, float4(0.0, 0.0, 0.0, 1.0)).xyz;
-    float3 direction = mul(_CameraProjInv, float4(uv, 0.0, 1.0)).xyz;
-    direction = mul(_CameraToWorld, float4(direction, 0.0)).xyz;
-    direction = normalize(direction);
-    return CreateRay(origin, direction);
+    //float3 origin = mul(_CameraToWorld, float4(0.0, 0.0, 0.0, 1.0)).xyz;
+    //float3 direction = mul(_CameraProjInv, float4(uv, 0.0, 1.0)).xyz;
+    //direction = mul(_CameraToWorld, float4(direction, 0.0)).xyz;
+    //direction = normalize(direction);
+    //return CreateRay(origin, direction);
+    
+    // reference: https://github.com/knightcrawler25/GLSL-PathTracer/blob/master/src/shaders/preview.glsl
+    //float2 d = 2.0 * (uv + camera.offset) / dims - 1.0;
+    //float scale = tan(camera.fov * 0.5f);
+    //d.x *= scale;
+    //d.y *= camera.ratio * scale;
+    //float3 direction = normalize(d.x * camera.right + d.y * camera.up + camera.forward);
+    //float3 focalPoint = direction * camera.focalDist;
+    //float cam_r1 = rand() * PI * 2.0;
+    //float cam_r2 = rand() * camera.aperture;
+    //float3 randomAperturePos = (cos(cam_r1) * camera.right + sin(cam_r1) * camera.up) * sqrt(cam_r2);
+    //float3 finalRayDir = normalize(focalPoint - randomAperturePos);
+    //return CreateRay(camera.pos + randomAperturePos, finalRayDir);
+    
+    float2 d = 2.0 * (uv + camera.offset) / dims - 1.0;
+    float scale = tan(camera.fov * 0.5f);
+    d.x *= scale;
+    d.y *= camera.ratio * scale;
+    float3 direction = normalize(d.x * camera.right + d.y * camera.up + camera.forward);
+    return CreateRay(camera.pos, direction);
 }
 
 Colors CreateColors(float3 baseColor, float3 emission, float metallic)
@@ -41,6 +76,7 @@ HitInfo CreateHitInfo()
     hit.norm = 0.0;
     hit.colors = CreateColors(0.0, 0.0, 0.0);
     hit.smoothness = 0.0;
+    hit.mode = 0.0;
     return hit;
 }
 
@@ -105,7 +141,7 @@ float Fresnel(float3 dir, float3 norm, float ior)
         etai = 1.0;
         etat = ior;
     }
-    float sint = etai / etat * sqrt(max(0.0, 1.0 - cosi * cosi));
+    float sint = etai / etat * sqrt(1.0 - cosi * cosi);
     if(sint >= 1.0)
     {
         return 1.0;
@@ -116,7 +152,7 @@ float Fresnel(float3 dir, float3 norm, float ior)
         cosi = abs(cosi);
         float Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost));
         float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost));
-        return (Rs * Rs + Rp * Rp) / 2;
+        return (Rs * Rs + Rp * Rp) / 2.0;
     }
 }
 #endif

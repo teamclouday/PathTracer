@@ -15,8 +15,14 @@ public class Tracing : MonoBehaviour
     [SerializeField]
     Light DirectionalLight;
 
-    [SerializeField, Range(1, 10)]
+    [SerializeField, Range(2, 20)]
     int TraceDepth = 5;
+
+    [SerializeField, Range(0.01f, 50.0f)]
+    float CameraFocalDistance = 1.0f;
+
+    [SerializeField, Range(0.0f, 10.0f)]
+    float CameraAperture = 0.0f;
 
     public static bool ComputeLock = false;
 
@@ -58,29 +64,43 @@ public class Tracing : MonoBehaviour
     {
         // set sample count in collect shader
         collectMaterial.SetFloat("_SampleCount", sampleCount);
-        // set frame target
-        RayTracingShader.SetTexture(0, "_FrameTarget", frameTarget);
-        // set camera matrix
-        RayTracingShader.SetMatrix("_CameraToWorld", mainCamera.cameraToWorldMatrix);
-        RayTracingShader.SetMatrix("_CameraProjInv", mainCamera.projectionMatrix.inverse);
-        // set skybox
-        RayTracingShader.SetTexture(0, "_SkyboxTexture", SkyboxTexture);
+        //// set camera matrix
+        //RayTracingShader.SetMatrix("_CameraToWorld", mainCamera.cameraToWorldMatrix);
+        //RayTracingShader.SetMatrix("_CameraProjInv", mainCamera.projectionMatrix.inverse);
         // random pixel offset
         RayTracingShader.SetVector("_PixelOffset", new Vector2(Random.value, Random.value));
-        // set directional light
-        RayTracingShader.SetVector("_DirectionalLight", directionalLightInfo);
         // trace depth
-        RayTracingShader.SetInt("_TraceDepth", ComputeLock ? 1 : TraceDepth);
+        RayTracingShader.SetInt("_TraceDepth", ComputeLock ? 2 : TraceDepth);
         // random seed
         RayTracingShader.SetFloat("_Seed", Random.value);
-        // set objects info
-        //if (ObjectManager.MeshBuffer != null) RayTracingShader.SetBuffer(0, "_Meshes", ObjectManager.MeshBuffer);
-        if (ObjectManager.VertexBuffer != null) RayTracingShader.SetBuffer(0, "_Vertices", ObjectManager.VertexBuffer);
-        if (ObjectManager.IndexBuffer != null) RayTracingShader.SetBuffer(0, "_Indices", ObjectManager.IndexBuffer);
-        if (ObjectManager.NormalBuffer != null) RayTracingShader.SetBuffer(0, "_Normals", ObjectManager.NormalBuffer);
-        if (ObjectManager.MaterialBuffer != null) RayTracingShader.SetBuffer(0, "_Materials", ObjectManager.MaterialBuffer);
-        if (ObjectManager.NodeBuffer != null) RayTracingShader.SetBuffer(0, "_Nodes", ObjectManager.NodeBuffer);
-    
+        // only update these parameters if redraw
+        if(sampleCount == 0)
+        {
+            // set frame target
+            RayTracingShader.SetTexture(0, "_FrameTarget", frameTarget);
+            // set camera info
+            RayTracingShader.SetVector("_CameraPos", mainCamera.transform.position);
+            RayTracingShader.SetVector("_CameraUp", mainCamera.transform.up);
+            RayTracingShader.SetVector("_CameraRight", mainCamera.transform.right);
+            RayTracingShader.SetVector("_CameraForward", mainCamera.transform.forward);
+            RayTracingShader.SetVector("_CameraInfo", new Vector4(
+                Mathf.Deg2Rad * mainCamera.fieldOfView,
+                CameraFocalDistance,
+                CameraAperture,
+                frameTarget.height / (float)frameTarget.width
+            ));
+            // set skybox
+            RayTracingShader.SetTexture(0, "_SkyboxTexture", SkyboxTexture);
+            // set directional light
+            RayTracingShader.SetVector("_DirectionalLight", directionalLightInfo);
+            //if (ObjectManager.MeshBuffer != null) RayTracingShader.SetBuffer(0, "_Meshes", ObjectManager.MeshBuffer);
+            // set objects info
+            if (ObjectManager.VertexBuffer != null) RayTracingShader.SetBuffer(0, "_Vertices", ObjectManager.VertexBuffer);
+            if (ObjectManager.IndexBuffer != null) RayTracingShader.SetBuffer(0, "_Indices", ObjectManager.IndexBuffer);
+            if (ObjectManager.NormalBuffer != null) RayTracingShader.SetBuffer(0, "_Normals", ObjectManager.NormalBuffer);
+            if (ObjectManager.MaterialBuffer != null) RayTracingShader.SetBuffer(0, "_Materials", ObjectManager.MaterialBuffer);
+            if (ObjectManager.NodeBuffer != null) RayTracingShader.SetBuffer(0, "_Nodes", ObjectManager.NodeBuffer);
+        }
     }
 
     private void ValidateTextures()
@@ -138,6 +158,11 @@ public class Tracing : MonoBehaviour
         Application.targetFrameRate = 72;
         sampleCount = 0;
         //Random.InitState(12345);
+    }
+
+    private void OnValidate()
+    {
+        sampleCount = 0;
     }
 
     private void Update()

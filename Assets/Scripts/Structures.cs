@@ -22,8 +22,8 @@ public struct MaterialData
 {
     public Vector3 Color;
     public Vector3 Emission;
-    public float Smoothness;
     public float Metallic;
+    public float Smoothness;
     public float RenderMode;
 
     public static int TypeSize = sizeof(float)*3*2+sizeof(float)*3;
