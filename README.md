@@ -43,7 +43,7 @@ Looking forward to further optimize it.
 Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/dragon)
 
 Added reflection & refraction workflow for transparent materials.  
-In Unity, if a material (standard shader) render mode is not opaque, it will go through this workflow. In this case, `Smoothness` is translated to isotropic coefficient:
+In my implementation, if a material (standard shader) render mode is not opaque, it will go through this workflow. In this case, smoothness is translated to index of refraction (`ior`):
 ```
 k => k * 2.0 + 1.0
 ```
@@ -86,3 +86,5 @@ Reference:
 [RadeonRays_SDK](https://github.com/GPUOpen-LibrariesAndSDKs/RadeonRays_SDK)  
 [Fast-BVH](https://github.com/brandonpelfrey/Fast-BVH)  
 [GLSL-PathTracer](https://github.com/knightcrawler25/GLSL-PathTracer)  
+[Unity Toy Path Tracer](http://theinstructionlimit.com/unity-toy-path-tracer)  
+[Another View on the Classic Ray-AABB Intersection Algorithm for BVH Traversal](https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525)
