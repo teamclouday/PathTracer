@@ -117,7 +117,7 @@ public class ObjectManager
         foreach(GameObject obj in objects)
         {
             // pre-multiply transformation matrix for all vertices and normals
-            var matrix = obj.transform.parent.localToWorldMatrix;
+            var matrix = obj.transform.localToWorldMatrix;
             // process all materials
             Material[] mats = obj.GetComponent<Renderer>().sharedMaterials;
             int matStart = materials.Count;

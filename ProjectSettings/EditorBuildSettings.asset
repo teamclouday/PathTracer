@@ -6,6 +6,6 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/Dragon.unity
-    guid: 2f0342064160f9445b3a7f2bc2dcb702
+    path: Assets/Scenes/CornellBoxBuddha.unity
+    guid: 032717fa23b2c394091d4edb141aea54
   m_configObjects: {}

@@ -1,0 +1,54 @@
+#pragma kernel CSMain
+
+#include "Tracing/global.hlsl"
+#include "Tracing/structures.hlsl"
+#include "Tracing/random.hlsl"
+#include "Tracing/functions.hlsl"
+#include "Tracing/intersection.hlsl"
+
+RWTexture2D<float4> _FrameNormalTarget;
+
+// trace a ray and detect nearest hit
+HitInfo Trace(Ray ray)
+{
+    HitInfo bestHit = CreateHitInfo();
+    // intersect with BVH tree
+    InersectBVHTree(ray, bestHit, 0);
+    return bestHit;
+}
+
+// return shading info based on ray and hitinfo
+float3 Shade(inout Ray ray, HitInfo hit)
+{
+    if (hit.dist < 1.#INF)
+    {
+        return hit.colors.emission + hit.colors.albedo;
+    }
+    else
+    {
+        // hit skybox
+        float raySampleScale = max(max(abs(ray.dir.x), abs(ray.dir.y)), abs(ray.dir.z));
+        return _SkyboxTexture.SampleLevel(sampler_SkyboxTexture, ray.dir / raySampleScale, 0).xyz;
+    }
+}
+
+[numthreads(8, 8, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    // save pixel center
+    PixelCenter = float2(id.xy);
+    // get output dimensions
+    uint width, height;
+    _FrameTarget.GetDimensions(width, height);
+    // create camera
+    Camera camera = CreateCamera();
+    // generate ray from camera
+    Ray ray = CreateCameraRay(camera, float2(id.xy), float2(width, height));
+    // trace ray
+    HitInfo hit = Trace(ray);
+    // write albedo
+    _FrameTarget[id.xy] = float4(saturate(Shade(ray, hit)), 1.0);
+    // write normal
+    _FrameNormalTarget[id.xy] = float4(hit.norm, 1.0);
+    
+}
