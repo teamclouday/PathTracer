@@ -59,6 +59,30 @@ Loading time is very slow. Need to optimize BVH tree construction.
 
 <img src="Images/dragon.png" width="600" alt="dragon">
 
+### Cornell Box & Buddha
+
+Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/cornellboxbuddha)
+
+Added [openimagedenoise](https://github.com/OpenImageDenoise/oidn), so that when the scene cannot converge, the output image is smooth.  
+Press Left CTRL + V to toggle denoiser, default is off.
+
+Scene Info:
+```
+BVH tree nodes count = 2164457
+Total vertices = 550046
+Total indices = 3265248
+Total normals = 550046
+Total materials = 10
+```
+Expect a long loading time.
+
+Without denoiser (412 samples):  
+<img src="Images/cornellboxbuddha_S412.png" width="600" alt="cornellboxbuddha_S412">
+
+With denoiser (195 samples):
+<img src="Images/cornellboxbuddha_S195.png" width="600" alt="cornellboxbuddha_S195">
+
+
 ------
 
 ### Controls
@@ -73,6 +97,7 @@ Left click and drag -> camera look around
 Scroll up -> move forward
 Scroll down -> move backward
 Left CTRL + X -> save screenshot in data folder
+Left CTRL + V -> toggle denoiser (default is off)
 ```
 
 ------
