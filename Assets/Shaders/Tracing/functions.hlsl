@@ -155,4 +155,34 @@ float Fresnel(float3 dir, float3 norm, float ior)
         return (Rs * Rs + Rp * Rp) / 2.0;
     }
 }
+
+// prepare a new ray when entering a BLAS tree
+Ray PrepareTreeEnterRay(Ray ray, int transformIdx)
+{
+    float4x4 worldToLocal = _Transforms[transformIdx * 2 + 1];
+    float3 origin = mul(worldToLocal, float4(ray.origin, 1.0)).xyz;
+    float3 dir = normalize(mul(worldToLocal, float4(ray.dir, 0.0)).xyz);
+    return CreateRay(origin, dir);
+}
+
+void PrepareTreeEnterHit(Ray rayLocal, inout HitInfo hit, int transformIdx)
+{
+    float4x4 worldToLocal = _Transforms[transformIdx * 2 + 1];
+    if (hit.dist < 1.#INF)
+    {
+        hit.pos = mul(worldToLocal, float4(hit.pos, 1.0)).xyz;
+        hit.dist = length(hit.pos - rayLocal.origin);
+    }
+}
+
+// update a hit info after exiting a BLAS tree
+void PrepareTreeExit(Ray rayWorld, inout HitInfo hit, int transformIdx)
+{
+    float4x4 localToWorld = _Transforms[transformIdx * 2];
+    if (hit.dist < 1.#INF)
+    {
+        hit.pos = mul(localToWorld, float4(hit.pos, 1.0)).xyz;
+        hit.dist = length(hit.pos - rayWorld.origin);
+    }
+}
 #endif

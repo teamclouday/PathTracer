@@ -12,8 +12,21 @@ RWTexture2D<float4> _FrameNormalTarget;
 HitInfo Trace(Ray ray)
 {
     HitInfo bestHit = CreateHitInfo();
-    // intersect with BVH tree
-    InersectBVHTree(ray, bestHit, 0);
+    // check tlas intersection
+    uint size, stride;
+    _TNodes.GetDimensions(size, stride);
+    for (uint i = 0; i < size; i++)
+    {
+        TLASNode node = _TNodes[i];
+        Ray localRay = PrepareTreeEnterRay(ray, node.transformIdx);
+        if (IntersectBox2(localRay, node.boundMax, node.boundMin))
+        {
+            // intersect with BLAS tree
+            PrepareTreeEnterHit(localRay, bestHit, node.transformIdx);
+            InersectBVHTree(localRay, bestHit, node.rootIdx, node.transformIdx);
+            PrepareTreeExit(ray, bestHit, node.transformIdx);
+        }
+    }
     return bestHit;
 }
 

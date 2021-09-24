@@ -40,7 +40,7 @@ struct MeshData
 };
 //StructuredBuffer<MeshData> _Meshes;
 
-struct NodeInfo
+struct BLASNode
 {
     float3 boundMax;
     float3 boundMin;
@@ -49,7 +49,16 @@ struct NodeInfo
     int materialIdx;
     int childIdx;
 };
-StructuredBuffer<NodeInfo> _Nodes;
+StructuredBuffer<BLASNode> _BNodes;
+
+struct TLASNode
+{
+    float3 boundMax;
+    float3 boundMin;
+    int transformIdx;
+    int rootIdx;
+};
+StructuredBuffer<TLASNode> _TNodes;
 
 struct MaterialData
 {
@@ -64,6 +73,7 @@ StructuredBuffer<MaterialData> _Materials;
 StructuredBuffer<float3> _Vertices;
 StructuredBuffer<int> _Indices;
 StructuredBuffer<float3> _Normals;
+StructuredBuffer<float4x4> _Transforms;
 
 // current pixel center
 float2 PixelCenter;

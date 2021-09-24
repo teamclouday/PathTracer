@@ -227,7 +227,7 @@ MonoBehaviour:
   TraceDepth: 5
   CameraFocalDistance: 1
   CameraAperture: 0
-  EnableDenoiser: 1
+  EnableDenoiser: 0
   DenoiserStartSamples: 100
 --- !u!114 &283962821
 MonoBehaviour:

@@ -30,9 +30,9 @@ public struct MaterialData
 }
 
 /// <summary>
-/// BVH tree node info
+/// BLAS node info
 /// </summary>
-public struct NodeInfo
+public struct BLASNode
 {
     public Vector3 BoundMax;
     public Vector3 BoundMin;
@@ -44,39 +44,57 @@ public struct NodeInfo
     public static int TypeSize = sizeof(float)*3*2+sizeof(int)*4;
 }
 
+public struct TLASNode
+{
+    public Vector3 BoundMax;
+    public Vector3 BoundMin;
+    public int TransformIdx;
+    public int NodeRootIdx;
+
+    public static int TypeSize = sizeof(float)*3*2+sizeof(int)*2;
+}
+
 /// <summary>
 /// Global Object Manager
 /// </summary>
 public class ObjectManager
 {
     private static readonly List<GameObject> objects = new List<GameObject>();
-    //private static readonly List<MeshData> meshes = new List<MeshData>();
     private static readonly List<Vector3> vertices = new List<Vector3>();
     private static readonly List<Vector3> normals = new List<Vector3>();
     private static readonly List<MaterialData> materials = new List<MaterialData>();
-    private static readonly List<NodeInfo> nodes = new List<NodeInfo>();
+
+    // TLAS, BLAS
+    private static readonly List<BLASNode> bnodes = new List<BLASNode>();
+    private static readonly List<TLASNode> tnodes = new List<TLASNode>();
+    // size of objects * 2, local to world & world to local transform
+    private static readonly List<Matrix4x4> transforms = new List<Matrix4x4>();
 
     private static List<int> indices = new List<int>();
 
-    //public static ComputeBuffer MeshBuffer;
     public static ComputeBuffer VertexBuffer;
     public static ComputeBuffer IndexBuffer;
     public static ComputeBuffer NormalBuffer;
     public static ComputeBuffer MaterialBuffer;
-    public static ComputeBuffer NodeBuffer;
+    public static ComputeBuffer BLASBuffer;
+    public static ComputeBuffer TLASBuffer;
+    public static ComputeBuffer TransformBuffer;
 
     private static bool objectUpdated = false;
+    private static bool objectTransformUpdated = false;
 
     public static void RegisterObject(GameObject o)
     {
         objects.Add(o);
         objectUpdated = true;
+        objectTransformUpdated = true;
     }
 
     public static void UnregisterObject(GameObject o)
     {
         objects.Remove(o);
         objectUpdated = true;
+        objectTransformUpdated = true;
     }
 
     public static bool Validate()
@@ -85,23 +103,32 @@ public class ObjectManager
         {
             if(obj.transform.hasChanged)
             {
-                objectUpdated = true;
+                objectTransformUpdated = true;
                 obj.transform.hasChanged = false;
+                break;
             }
             if (obj.transform.parent.transform.hasChanged)
             {
-                objectUpdated = true;
+                objectTransformUpdated = true;
                 obj.transform.parent.transform.hasChanged = false;
+                break;
             }
         }
+
+        return BuildBVH() || LoadTransforms();
+    }
+
+    private static bool BuildBVH()
+    {
         if (!objectUpdated) return false;
 
-        //meshes.Clear();
         vertices.Clear();
         indices.Clear();
         normals.Clear();
         materials.Clear();
-        nodes.Clear();
+        bnodes.Clear();
+        tnodes.Clear();
+
         // add default material if submesh does not have a material
         materials.Add(new MaterialData()
         {
@@ -111,89 +138,83 @@ public class ObjectManager
             Smoothness = 0.0f,
             RenderMode = 0
         });
-        // init material info count (should be same count as indices)
-        List<int> materialInfo = new List<int>();
+
         // get info from each object
-        foreach(GameObject obj in objects)
+        for(int idx = 0; idx < objects.Count; idx++)
         {
-            // pre-multiply transformation matrix for all vertices and normals
-            var matrix = obj.transform.localToWorldMatrix;
-            // process all materials
-            Material[] mats = obj.GetComponent<Renderer>().sharedMaterials;
+            var obj = objects[idx];
+            // load materials
+            var meshMats = obj.GetComponent<Renderer>().sharedMaterials;
             int matStart = materials.Count;
-            int matCount = mats.Length;
-            foreach(Material mat in mats)
+            int matCount = meshMats.Length;
+            foreach(var mat in meshMats)
             {
                 materials.Add(new MaterialData()
                 {
                     Color = ColorToVector(mat.color),
                     Emission = mat.IsKeywordEnabled("_EMISSION") ? ColorToVector(mat.GetColor("_EmissionColor")) : Vector3.zero,
-                    Metallic = mat.GetFloat("_Metallic"), // here I assume it is standard unity shader
-                    Smoothness = mat.GetFloat("_Glossiness"),
+                    // assuming standard unity shader
+                    Metallic = mat.GetFloat("_Metallic"),
+                    Smoothness = mat.GetFloat("_Glossiness"), // smoothness
                     RenderMode = mat.GetFloat("_Mode") // 0 for opaque, > 0 for transparent
                 });
             }
-            // process mesh data
-            Mesh mesh = obj.GetComponent<MeshFilter>().sharedMesh;
+
+            var mesh = obj.GetComponent<MeshFilter>().sharedMesh;
+            var meshVertices = mesh.vertices.ToList();
+            var meshNormals = mesh.normals;
             int vertexStart = vertices.Count;
-            vertices.AddRange(mesh.vertices.Select(
-                vert => matrix.MultiplyPoint3x4(vert)
-            ));
-            int count = 0;
+            
             for(int i = 0; i < mesh.subMeshCount; i++)
             {
-                int indexStart = indices.Count;
-                var submesh = mesh.GetIndices(i);
-                indices.AddRange(submesh.Select(idx => idx + vertexStart));
-                materialInfo.AddRange(
-                    Enumerable.Repeat(i < matCount ? i + matStart : 0, submesh.Length / 3)
-                );
-                //meshes.Add(new MeshData()
-                //{
-                //    //LocalToWorld = obj.transform.parent.localToWorldMatrix,
-                //    IndicesStart = indexStart,
-                //    IndicesCount = submesh.Length,
-                //    MaterialIdx = i < matCount ? i + matStart : 0 // if index is not valid, no material, then use default one
-                //});
-                count += submesh.Length;
+                var submeshIndices = mesh.GetIndices(i).ToList();
+                BVH blasTree = new BVH(meshVertices, submeshIndices);
+                blasTree.Flatten(indices, submeshIndices, vertexStart, bnodes, tnodes, i < matCount ? i + matStart : 0, idx);
             }
-            normals.AddRange(mesh.normals.Select(
-                norm => matrix.MultiplyVector(norm)
-            ));
-            if (mesh.vertices.Length != mesh.normals.Length)
+
+            vertices.AddRange(meshVertices);
+            normals.AddRange(meshNormals);
+            if (meshNormals.Length != meshVertices.Count)
                 Debug.LogError("Object " + obj.name + " has different normals and vertices size");
-            
-            Debug.Log("Object " + obj.name + 
-                " loaded (vertices = " + (vertices.Count - vertexStart) +
-                ", indices = " + count + ")"
-            );
         }
 
-        // build BVH
-        BVH tree = new BVH(vertices, indices);
-        tree.Flatten(nodes, materialInfo);
-        // reorder indices
-        indices = tree.OrderedIndices;
+        UpdateBuffer(ref IndexBuffer, indices, sizeof(int));
+        UpdateBuffer(ref VertexBuffer, vertices, sizeof(float) * 3);
+        UpdateBuffer(ref NormalBuffer, normals, sizeof(float) * 3);
+        UpdateBuffer(ref MaterialBuffer, materials, MaterialData.TypeSize);
+        UpdateBuffer(ref BLASBuffer, bnodes, BLASNode.TypeSize);
+        UpdateBuffer(ref TLASBuffer, tnodes, TLASNode.TypeSize);
 
         // final report
         Debug.Log(
             "BVH built\n" +
-            "BVH tree nodes count = " + nodes.Count + "\n" +
+            "TLAS nodes = " + tnodes.Count + "\n" +
+            "BLAS nodes = " + bnodes.Count + "\n" +
             "Total vertices = " + vertices.Count + "\n" +
             "Total indices = " + indices.Count + "\n" +
             "Total normals = " + normals.Count + "\n" +
             "Total materials = " + materials.Count
         );
 
-
-        //UpdateBuffer(ref MeshBuffer, meshes, MeshData.TypeSize);
-        UpdateBuffer(ref IndexBuffer, indices, sizeof(int));
-        UpdateBuffer(ref VertexBuffer, vertices, sizeof(float) * 3);
-        UpdateBuffer(ref NormalBuffer, normals, sizeof(float) * 3);
-        UpdateBuffer(ref MaterialBuffer, materials, MaterialData.TypeSize);
-        UpdateBuffer(ref NodeBuffer, nodes, NodeInfo.TypeSize);
-
         objectUpdated = false;
+        return true;
+    }
+
+    private static bool LoadTransforms()
+    {
+        if (!objectTransformUpdated) return false;
+
+        transforms.Clear();
+
+        foreach(var obj in objects)
+        {
+            transforms.Add(obj.transform.localToWorldMatrix);
+            transforms.Add(obj.transform.worldToLocalMatrix);
+        }
+
+        UpdateBuffer(ref TransformBuffer, transforms, sizeof(float) * 4 * 4);
+
+        objectTransformUpdated = false;
         return true;
     }
 
@@ -207,12 +228,13 @@ public class ObjectManager
 
     public static void Destroy()
     {
-        //if (MeshBuffer != null) MeshBuffer.Release();
         if (IndexBuffer != null) IndexBuffer.Release();
         if (VertexBuffer != null) VertexBuffer.Release();
         if (NormalBuffer != null) NormalBuffer.Release();
         if (MaterialBuffer != null) MaterialBuffer.Release();
-        if (NodeBuffer != null) NodeBuffer.Release();
+        if (TLASBuffer != null) TLASBuffer.Release();
+        if (BLASBuffer != null) BLASBuffer.Release();
+        if (TransformBuffer != null) TransformBuffer.Release();
     }
 
     private static Vector3 ColorToVector(Color color)

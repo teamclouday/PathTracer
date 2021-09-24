@@ -136,7 +136,6 @@ public class BVH
 {
     public BVHNode BVHRoot;
     public List<int> OrderedFaceId = new List<int>();
-    public List<int> OrderedIndices = new List<int>();
     
     public BVH(List<Vector3> vertices, List<int> indices)
     {
@@ -182,9 +181,6 @@ public class BVH
             int idx = OrderedFaceId.Count;
             int faceIdx = faceInfo[faceInfoStart].FaceIdx;
             OrderedFaceId.Add(faceIdx);
-            OrderedIndices.Add(indices[faceIdx * 3]);
-            OrderedIndices.Add(indices[faceIdx * 3 + 1]);
-            OrderedIndices.Add(indices[faceIdx * 3 + 2]);
             return BVHNode.InitLeaf(idx, faceInfoCount, bounding);
         }
         else
@@ -203,9 +199,6 @@ public class BVH
                 {
                     int faceIdx = faceInfo[i].FaceIdx;
                     OrderedFaceId.Add(faceIdx);
-                    OrderedIndices.Add(indices[faceIdx * 3]);
-                    OrderedIndices.Add(indices[faceIdx * 3 + 1]);
-                    OrderedIndices.Add(indices[faceIdx * 3 + 2]);
                 }
                 return BVHNode.InitLeaf(idx, faceInfoCount, bounding);
             }
@@ -231,26 +224,48 @@ public class BVH
         }
     }
 
-    public void Flatten(List<NodeInfo> result, List<int> materialInfo)
+    public void Flatten(
+        List<int> indices, List<int> subindices, int verticesOffset,
+        List<BLASNode> bnodes, List<TLASNode> tnodes,
+        int materialIdx, int transformIdx
+    )
     {
+        int faceOffset = indices.Count / 3;
+        int bnodesOffset = bnodes.Count;
+        // add indices
+        foreach(int faceId in OrderedFaceId)
+        {
+            indices.Add(subindices[faceId * 3] + verticesOffset);
+            indices.Add(subindices[faceId * 3 + 1] + verticesOffset);
+            indices.Add(subindices[faceId * 3 + 2] + verticesOffset);
+        }
+        // add BLAS nodes
         Queue<BVHNode> nodes = new Queue<BVHNode>();
         nodes.Enqueue(BVHRoot);
-        while(nodes.Count > 0)
+        while (nodes.Count > 0)
         {
             var node = nodes.Dequeue();
-            result.Add(new NodeInfo
+            bnodes.Add(new BLASNode
             {
                 BoundMax = node.Bounds.pMax,
                 BoundMin = node.Bounds.pMin,
-                FaceStartIdx = node.FaceStart,
-                FaceEndIdx = node.FaceEnd,
-                MaterialIdx = node.FaceStart >= 0 ? materialInfo[OrderedFaceId[node.FaceStart]] : 0,
-                ChildIdx = node.FaceStart >= 0 ? -1 : nodes.Count + result.Count + 1
+                FaceStartIdx = node.FaceStart >= 0 ? node.FaceStart + faceOffset : -1,
+                FaceEndIdx = node.FaceStart >= 0 ? node.FaceEnd + faceOffset : -1,
+                MaterialIdx = node.FaceStart >= 0 ? materialIdx : 0,
+                ChildIdx = node.FaceStart >= 0 ? -1 : nodes.Count + bnodes.Count + 1
             });
             if (node.LeftChild != null)
                 nodes.Enqueue(node.LeftChild);
             if (node.RightChild != null)
                 nodes.Enqueue(node.RightChild);
         }
+        // add TLAS node
+        tnodes.Add(new TLASNode
+        {
+            BoundMax = BVHRoot.Bounds.pMax,
+            BoundMin = BVHRoot.Bounds.pMin,
+            NodeRootIdx = bnodesOffset,
+            TransformIdx = transformIdx
+        });
     }
 }

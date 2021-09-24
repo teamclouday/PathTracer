@@ -9,15 +9,9 @@
 // trace a ray and returns hit immediately (for shadow rays)
 bool TraceHit(Ray ray, float targetDist)
 {
-    uint count, stride, i;
-    //_Meshes.GetDimensions(count, stride);
-    //for (i = 0; i < count; i++)
-    //{
-    //    if (IntersectMeshObjectFast(ray, _Meshes[i], targetDist))
-    //        return true;
-    //}
-    if (IntersectBVHTreeFast(ray, 0, targetDist))
-        return true;
+    //uint count, stride, i;
+    //if (IntersectBVHTreeFast(ray, 0, targetDist))
+    //    return true;
     return false;
 }
 
@@ -25,15 +19,21 @@ bool TraceHit(Ray ray, float targetDist)
 HitInfo Trace(Ray ray)
 {
     HitInfo bestHit = CreateHitInfo();
-    // intersect with mesh objects
-    //uint count, stride, i;
-    //_Meshes.GetDimensions(count, stride);
-    //for (i = 0; i < count; i++)
-    //{
-    //    IntersectMeshObject(ray, bestHit, _Meshes[i]);
-    //}
-    // intersect with BVH tree
-    InersectBVHTree(ray, bestHit, 0);
+    // check tlas intersection
+    uint size, stride;
+    _TNodes.GetDimensions(size, stride);
+    for (uint i = 0; i < size; i++)
+    {
+        TLASNode node = _TNodes[i];
+        Ray localRay = PrepareTreeEnterRay(ray, node.transformIdx);
+        if (IntersectBox2(localRay, node.boundMax, node.boundMin))
+        {
+            // intersect with BLAS tree
+            PrepareTreeEnterHit(localRay, bestHit, node.transformIdx);
+            InersectBVHTree(localRay, bestHit, node.rootIdx, node.transformIdx);
+            PrepareTreeExit(ray, bestHit, node.transformIdx);
+        }
+    }
     return bestHit;
 }
 

@@ -61,7 +61,6 @@ public class Tracing : MonoBehaviour
     {
         if (sampleCount != DenoiserStartSamples || !EnableDenoiser) return;
         ValidateTextures();
-        ValidateObjects();
         SetShaderParameters(InfoShader, DenoiserStartSamples);
         InfoShader.SetTexture(0, "_FrameTarget", denoiseAlbedo);
         InfoShader.SetTexture(0, "_FrameNormalTarget", denoiseNormal);
@@ -73,8 +72,6 @@ public class Tracing : MonoBehaviour
     {
         // check if textures are ready
         ValidateTextures();
-        // check if object buffers are ready
-        ValidateObjects();
         // set shader parameters
         SetShaderParameters(RayTracingShader, 0);
         // set frame target
@@ -137,13 +134,15 @@ public class Tracing : MonoBehaviour
             shader.SetTexture(0, "_SkyboxTexture", SkyboxTexture);
             // set directional light
             shader.SetVector("_DirectionalLight", directionalLightInfo);
-            //if (ObjectManager.MeshBuffer != null) RayTracingShader.SetBuffer(0, "_Meshes", ObjectManager.MeshBuffer);
             // set objects info
             if (ObjectManager.VertexBuffer != null) shader.SetBuffer(0, "_Vertices", ObjectManager.VertexBuffer);
             if (ObjectManager.IndexBuffer != null) shader.SetBuffer(0, "_Indices", ObjectManager.IndexBuffer);
             if (ObjectManager.NormalBuffer != null) shader.SetBuffer(0, "_Normals", ObjectManager.NormalBuffer);
             if (ObjectManager.MaterialBuffer != null) shader.SetBuffer(0, "_Materials", ObjectManager.MaterialBuffer);
-            if (ObjectManager.NodeBuffer != null) shader.SetBuffer(0, "_Nodes", ObjectManager.NodeBuffer);
+            if (ObjectManager.TLASBuffer != null) shader.SetBuffer(0, "_TNodes", ObjectManager.TLASBuffer);
+            if (ObjectManager.BLASBuffer != null) shader.SetBuffer(0, "_BNodes", ObjectManager.BLASBuffer);
+            if (ObjectManager.TransformBuffer != null) shader.SetBuffer(0, "_Transforms", ObjectManager.TransformBuffer);
+
         }
     }
 
@@ -199,14 +198,6 @@ public class Tracing : MonoBehaviour
         }
     }
 
-    private void ValidateObjects()
-    {
-        // validate objects in the scene
-        // and update compute buffers
-        if (ObjectManager.Validate())
-            ResetSamples();
-    }
-
     private void Awake()
     {
         // get main camera in the scene
@@ -248,8 +239,9 @@ public class Tracing : MonoBehaviour
             UpdateDirectionalLight();
             DirectionalLight.transform.hasChanged = false;
         }
+        if (ObjectManager.Validate()) ResetSamples();
         // press ESC to exit program
-        if(Input.GetKeyDown(KeyCode.Escape))
+        if (Input.GetKeyDown(KeyCode.Escape))
             Application.Quit();
         // press ctrl + X to save screenshot
         if(Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.X))

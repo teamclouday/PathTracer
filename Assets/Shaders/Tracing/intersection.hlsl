@@ -166,7 +166,7 @@ bool IntersectMeshObjectFast(Ray ray, MeshData mesh, float targetDist)
 
 // test intersection with BVH tree
 // reference: https://github.com/knightcrawler25/GLSL-PathTracer/blob/master/src/shaders/common/closest_hit.glsl
-void InersectBVHTree(Ray ray, inout HitInfo bestHit, int startIdx)
+void InersectBVHTree(Ray ray, inout HitInfo bestHit, int startIdx, int transformIdx)
 {
     int stack[BVHTREE_RECURSE_SIZE];
     int stackPtr = 0;
@@ -175,10 +175,11 @@ void InersectBVHTree(Ray ray, inout HitInfo bestHit, int startIdx)
     //int count = (int)dimC;
     int faceIdx;
     stack[stackPtr] = startIdx;
+    float4x4 localToWorld = _Transforms[transformIdx * 2];
     while (stackPtr >= 0 && stackPtr < BVHTREE_RECURSE_SIZE)
     {
         int idx = stack[stackPtr--];
-        NodeInfo node = _Nodes[idx];
+        BLASNode node = _BNodes[idx];
         // check if ray intersect with bounding box
         bool hit = IntersectBox2(ray, node.boundMax, node.boundMin);
         bool leaf = node.faceStartIdx >= 0;
@@ -205,7 +206,7 @@ void InersectBVHTree(Ray ray, inout HitInfo bestHit, int startIdx)
                             MaterialData mat = _Materials[node.materialIdx];
                             bestHit.dist = t;
                             bestHit.pos = hitPos;
-                            bestHit.norm = normalize(norm);
+                            bestHit.norm = normalize(mul(localToWorld, float4(norm, 0.0)).xyz);
                             bestHit.colors = CreateColors(mat.color, mat.emission, mat.metallic);
                             bestHit.smoothness = mat.smoothness;
                             bestHit.mode = mat.mode;
@@ -225,17 +226,17 @@ void InersectBVHTree(Ray ray, inout HitInfo bestHit, int startIdx)
 // quickly determine if intersect with something
 bool IntersectBVHTreeFast(Ray ray, int startIdx, float targetDist)
 {
-    int stack[32];
+    int stack[BVHTREE_RECURSE_SIZE];
     int stackPtr = 0;
     //uint dimC, dimS;
     //_Nodes.GetDimensions(dimC, dimS);
     //int count = (int)dimC;
     int faceIdx;
     stack[stackPtr] = startIdx;
-    while (stackPtr >= 0)
+    while (stackPtr >= 0 && stackPtr < BVHTREE_RECURSE_SIZE)
     {
         int idx = stack[stackPtr--];
-        NodeInfo node = _Nodes[idx];
+        BLASNode node = _BNodes[idx];
         // check if ray intersect with bounding box
         bool hit = IntersectBox2(ray, node.boundMax, node.boundMin);
         bool leaf = node.faceStartIdx >= 0;
@@ -249,9 +250,6 @@ bool IntersectBVHTreeFast(Ray ray, int startIdx, float targetDist)
                     float3 v0 = _Vertices[_Indices[i]];
                     float3 v1 = _Vertices[_Indices[i + 1]];
                     float3 v2 = _Vertices[_Indices[i + 2]];
-                    float3 norm0 = _Normals[_Indices[i]];
-                    float3 norm1 = _Normals[_Indices[i + 1]];
-                    float3 norm2 = _Normals[_Indices[i + 2]];
                     float t, u, v;
                     if (IntersectTriangle(ray, v0, v1, v2, t, u, v))
                     {
