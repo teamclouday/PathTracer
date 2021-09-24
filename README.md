@@ -79,7 +79,7 @@ Expect a long loading time.
 Without denoiser (412 samples):  
 <img src="Images/cornellboxbuddha_S412.png" width="600" alt="cornellboxbuddha_S412">
 
-With denoiser (195 samples):
+With denoiser (195 samples):  
 <img src="Images/cornellboxbuddha_S195.png" width="600" alt="cornellboxbuddha_S195">
 
 
