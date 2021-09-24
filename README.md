@@ -82,6 +82,19 @@ Without denoiser (412 samples):
 With denoiser (195 samples):  
 <img src="Images/cornellboxbuddha_S195.png" width="600" alt="cornellboxbuddha_S195">
 
+_Side Note_:  
+After multiple testing in this environment setup,
+it seems that with a colored skybox (not dark in this case),
+the scene converges much faster.
+With a dark environment and only one small emissive light object,
+the scene converges very slow.
+The reason behind it, in my opinion,
+is because during random sampling,
+the ray hits a dark non-emissive object much more frequently than
+hitting an emissive object.
+Therefore, the samples contain many dark pixels because the ray is not
+lucky enough to reach a light source.
+A denoiser is required to improve the visual in this case.
 
 ------
 
