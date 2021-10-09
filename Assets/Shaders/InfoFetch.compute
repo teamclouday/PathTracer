@@ -48,15 +48,18 @@ float3 Shade(inout Ray ray, HitInfo hit)
 [numthreads(8, 8, 1)]
 void CSMain(uint3 id : SV_DispatchThreadID)
 {
-    // save pixel center
-    PixelCenter = float2(id.xy);
     // get output dimensions
     uint width, height;
     _FrameTarget.GetDimensions(width, height);
     // create camera
     Camera camera = CreateCamera();
+    // save pixel center
+    float2 center = float2(id.xy) + camera.offset;
+    PixelCenter = 2.0 * center / float2(width, height) - 1.0;
+    // init random seed
+    rng_initialize(center, _FrameCount);
     // generate ray from camera
-    Ray ray = CreateCameraRay(camera, float2(id.xy), float2(width, height));
+    Ray ray = CreateCameraRay(camera, PixelCenter);
     // trace ray
     HitInfo hit = Trace(ray);
     // write albedo

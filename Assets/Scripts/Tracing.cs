@@ -115,7 +115,9 @@ public class Tracing : MonoBehaviour
         // trace depth
         shader.SetInt("_TraceDepth", ComputeLock ? 2 : TraceDepth);
         // random seed
-        shader.SetFloat("_Seed", Random.value);
+        //shader.SetFloat("_Seed", Random.value);
+        // frame count
+        shader.SetInt("_FrameCount", (int)sampleCount);
         // only update these parameters if redraw
         if(sampleCount == targetCount)
         {

@@ -29,7 +29,7 @@ Ray CreateRay(float3 origin, float3 direction)
     return ray;
 }
 
-Ray CreateCameraRay(Camera camera, float2 uv, float2 dims)
+Ray CreateCameraRay(Camera camera, float2 d)
 {
     //float3 origin = mul(_CameraToWorld, float4(0.0, 0.0, 0.0, 1.0)).xyz;
     //float3 direction = mul(_CameraProjInv, float4(uv, 0.0, 1.0)).xyz;
@@ -49,8 +49,7 @@ Ray CreateCameraRay(Camera camera, float2 uv, float2 dims)
     //float3 randomAperturePos = (cos(cam_r1) * camera.right + sin(cam_r1) * camera.up) * sqrt(cam_r2);
     //float3 finalRayDir = normalize(focalPoint - randomAperturePos);
     //return CreateRay(camera.pos + randomAperturePos, finalRayDir);
-    
-    float2 d = 2.0 * (uv + camera.offset) / dims - 1.0;
+
     float scale = tan(camera.fov * 0.5f);
     d.x *= scale;
     d.y *= camera.ratio * scale;
@@ -89,16 +88,15 @@ bool CullFace(float3 norm, float3 eye, float3 pos)
 // create new sample direction in a hemisphere
 float3 SampleHemisphere1(float3 norm, float alpha = 0.0)
 {
-    float cosTheta = pow(rand(), 1.0 / (1.0 + alpha));
+    float2 rand = rand2();
+    float cosTheta = pow(rand.x, 1.0 / (1.0 + alpha));
     float sinTheta = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
-    float phi = 2.0 * PI * rand();
+    float phi = PI_TWO * rand.y;
     float3 tangentSpaceDir = float3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
     // from tangent space to world space
-    float3 helper = float3(1, 0, 0);
-    if (abs(norm.x) > 0.99)
-        helper = float3(0, 0, 1);
-    float3 tangent = normalize(cross(norm, helper));
-    float3 binormal = normalize(cross(norm, tangent));
+    float3 helper = abs(norm.x) > 0.999 ? float3(0, 0, 1) : float3(1, 0, 0);
+    float3 tangent = normalize(cross(helper, norm));
+    float3 binormal = cross(norm, tangent);
     // get new direction
     return mul(tangentSpaceDir, float3x3(tangent, binormal, norm));
 }
@@ -106,7 +104,7 @@ float3 SampleHemisphere1(float3 norm, float alpha = 0.0)
 // reference: https://github.com/LWJGL/lwjgl3-demos/blob/main/res/org/lwjgl/demo/opengl/raytracing/randomCommon.glsl
 float3 SampleHemisphere2(float3 norm)
 {
-    float angle = rand() * 2.0 * PI;
+    float angle = rand() * PI_TWO;
     float u = rand() * 2.0 - 1.0;
     float sqrtMinusU2 = sqrt(1.0 - u * u);
     float3 v = float3(sqrtMinusU2 * cos(angle), sqrtMinusU2 * sin(angle), u);
@@ -115,10 +113,24 @@ float3 SampleHemisphere2(float3 norm)
 
 float3 SampleHemisphere3(float3 norm, float alpha = 0.0)
 {
-    float3 randomVec = float3(rand(), rand(), rand());
+    float3 randomVec = rand3();
     float r = pow(randomVec.x, 1.0 / (1.0 + alpha));
-    float angle = randomVec.y * 2.0 * PI;
-    float sr = sqrt(1.0 - r * r);
+    float angle = randomVec.y * PI_TWO;
+    float sr = saturate(sqrt(1.0 - r * r));
+    float3 ph = float3(sr * cos(angle), sr * sin(angle), r);
+    float3 tangent = normalize(randomVec * 2.0 - 1.0);
+    float3 bitangent = normalize(cross(tangent, norm));
+    tangent = normalize(cross(bitangent, norm));
+    return mul(ph, float3x3(tangent, bitangent, norm));
+}
+
+float3 SampleHemisphere4(float3 norm, float alpha = 1.0)
+{
+    alpha = 1.0 - alpha; // convert from smoothness to roughness
+    float3 randomVec = rand3();
+    float r = sqrt((1.0 - randomVec.x) / (1.0 + (alpha * alpha - 1.0) * randomVec.x));
+    float angle = randomVec.y * PI_TWO;
+    float sr = saturate(sqrt(1.0 - r * r));
     float3 ph = float3(sr * cos(angle), sr * sin(angle), r);
     float3 tangent = normalize(randomVec * 2.0 - 1.0);
     float3 bitangent = normalize(cross(tangent, norm));

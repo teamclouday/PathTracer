@@ -28,7 +28,8 @@ float4 _DirectionalLight;
 int _TraceDepth;
 
 // random seed
-float _Seed;
+//float _Seed;
+int _FrameCount;
 
 // object info
 struct MeshData
@@ -77,7 +78,9 @@ StructuredBuffer<float4x4> _Transforms;
 
 // current pixel center
 float2 PixelCenter;
+uint4 RandomSeed;
 
 // define PI value
 const float PI = 3.14159265358979323846;
+const float PI_TWO = 6.283185307179586;
 #endif

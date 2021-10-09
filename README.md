@@ -117,14 +117,10 @@ Left CTRL + V -> toggle denoiser (default is off)
 
 Reference:
 
-[GPU Ray Tracing in Unity – Part 1](http://blog.three-eyed-games.com/2018/05/03/gpu-ray-tracing-in-unity-part-1/)  
-[GPU Path Tracing in Unity – Part 2](http://three-eyed-games.com/2018/05/12/gpu-path-tracing-in-unity-part-2/)  
-[GPU Path Tracing in Unity – Part 3](http://three-eyed-games.com/2019/03/18/gpu-path-tracing-in-unity-part-3/)  
+[GPU Ray Tracing in Unity](http://blog.three-eyed-games.com/2018/05/03/gpu-ray-tracing-in-unity-part-1/)  
 [Physically Based Rendering](https://www.pbr-book.org/3ed-2018/contents)  
 [RadeonRays_SDK](https://github.com/GPUOpen-LibrariesAndSDKs/RadeonRays_SDK)  
-[Fast-BVH](https://github.com/brandonpelfrey/Fast-BVH)  
 [GLSL-PathTracer](https://github.com/knightcrawler25/GLSL-PathTracer)  
-[Unity Toy Path Tracer](http://theinstructionlimit.com/unity-toy-path-tracer)  
 [Another View on the Classic Ray-AABB Intersection Algorithm for BVH Traversal](https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525)  
 [Spatial Splits in Bounding Volume Hierarchies](https://www.nvidia.in/docs/IO/77714/sbvh.pdf)  
 [Recursive SAH-based Bounding Volume Hierarchy Construction](https://www.gcc.tu-darmstadt.de/media/gcc/papers/rsah_gi2016.pdf)  

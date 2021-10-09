@@ -60,19 +60,14 @@ float3 Shade(inout Ray ray, HitInfo hit)
             ray.origin = hit.pos + sign(outside) * hit.norm * 1e-5;
             if (random < kr)
             {
-                ray.dir = normalize(SampleHemisphere3(reflect(ray.dir, hit.norm), 10000.0));
-                //ray.dir = normalize(reflect(ray.dir, hit.norm));
-                float coeff = clamp(1.0 / kr, 1e-2, 1.0);
-                //float coeff = 1.0 / kr;
-                ray.energy *= coeff * 5.0 * hit.colors.specular * saturate(dot(hit.norm, ray.dir));
+                ray.dir = normalize(SampleHemisphere3(reflect(ray.dir, hit.norm), 100000.0 * kr));
+                ray.energy *= 1.0 / kr * hit.colors.specular * saturate(dot(hit.norm, ray.dir));
             }
             else
             {
-                ray.dir = normalize(SampleHemisphere3(refract(ray.dir, hit.norm, 1.0 / ior), 10000.0));;
-                //ray.dir = normalize(refract(ray.dir, hit.norm, 1.0 / ior));
-                float coeff = clamp(1.0 / (1.0 - kr), 1e-2, 1.0);
-                //float coeff = 1.0 / (1.0 - kr);
-                ray.energy *= coeff * 2.0 * hit.colors.albedo * saturate(dot(-hit.norm, ray.dir));
+                kr = saturate(1.0 - kr);
+                ray.dir = normalize(SampleHemisphere3(refract(ray.dir, hit.norm, 1.0 / ior), 100000.0 * kr));
+                ray.energy *= 1.0 / kr * hit.colors.albedo * saturate(dot(-hit.norm, ray.dir));
             }
             //ray.dir = normalize(refract(ray.dir, hit.norm, 1.0 / ior));
             //ray.energy *= 2.0 * hit.colors.albedo;
@@ -84,18 +79,15 @@ float3 Shade(inout Ray ray, HitInfo hit)
             ray.origin = hit.pos + hit.norm * 1e-5;
             float specChance = dot(hit.colors.specular, 0.333333333333);
             float diffChance = dot(hit.colors.albedo, 0.33333333333);
-            float sum = specChance + diffChance;
-            specChance /= sum;
-            diffChance /= sum;
+            float sum = 1.0 / (specChance + diffChance);
+            specChance *= sum;
+            diffChance *= sum;
             float random = rand();
             if (random < specChance)
             {
-                float alpha = pow(10000.0, hit.smoothness);
+                float alpha = 100000.0 * hit.smoothness;
                 ray.dir = normalize(SampleHemisphere3(reflect(ray.dir, hit.norm), alpha));
-                ray.energy *= 1.0 / specChance * hit.colors.specular *
-                    saturate(dot(hit.norm, ray.dir) * (alpha + 2.0) / (alpha + 1.0));
-                //ray.dir = reflect(ray.dir, hit.norm);
-                //ray.energy *= 1.0 / specChance * hit.colors.specular * saturate(dot(hit.norm, ray.dir));
+                ray.energy *= 1.0 / specChance * 2.0 * hit.colors.specular * saturate(dot(hit.norm, ray.dir));
             }
             else
             {
@@ -111,7 +103,6 @@ float3 Shade(inout Ray ray, HitInfo hit)
         //    return hit.emission;
         //}
         //return hit.colors.emission + saturate(dot(hit.norm, _DirectionalLight.xyz)) * _DirectionalLight.w * hit.colors.albedo;
-        
     }
     else
     {
@@ -125,15 +116,18 @@ float3 Shade(inout Ray ray, HitInfo hit)
 [numthreads(8,8,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    // save pixel center
-    PixelCenter = float2(id.xy);
     // get output dimensions
     uint width, height;
     _FrameTarget.GetDimensions(width, height);
     // create camera
     Camera camera = CreateCamera();
+    // save pixel center
+    float2 center = float2(id.xy) + camera.offset;
+    PixelCenter = 2.0 * center / float2(width, height) - 1.0;
+    // init random seed
+    rng_initialize(center, _FrameCount);
     // generate ray from camera
-    Ray ray = CreateCameraRay(camera, float2(id.xy), float2(width, height));
+    Ray ray = CreateCameraRay(camera, PixelCenter);
     // trace ray
     float3 color = 0.0;
     for (int i = 0; i < _TraceDepth; i++)
