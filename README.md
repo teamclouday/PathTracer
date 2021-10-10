@@ -108,6 +108,13 @@ Finally, improve the transparent workload for better visual effects. (Not referi
 Denoised view:  
 <img src="Images/bunny.png" width="600" alt="bunny">
 
+_Side Note_:  
+As you may have noticed in previous "Cornell Box & Buddha" demo images, the head light in the scene casts light in biased directions.
+This is caused by a bug in sampling function, which is partially fixed in this new scene.
+Can refer to [here](https://stackoverflow.com/questions/69510208/path-tracing-cosine-hemisphere-sampling-and-emissive-objects) for details.
+The reason I say it's partially fixed is because though the area light looks fine when it is large, it is still not perfect when it is a small light.
+In fact, no matter of its geometric shape, it will tend to scatter a cross shape distribution of light on the ground.
+
 ------
 
 ### Controls
