@@ -81,6 +81,6 @@ float2 PixelCenter;
 uint4 RandomSeed;
 
 // define PI value
-const float PI = 3.14159265358979323846;
-const float PI_TWO = 6.283185307179586;
+const float PI =        3.14159265358979323846;
+const float PI_TWO =    6.28318530717958623198;
 #endif

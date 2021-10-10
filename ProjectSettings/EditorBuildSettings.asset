@@ -6,6 +6,6 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/CornellBoxBuddha.unity
-    guid: 032717fa23b2c394091d4edb141aea54
+    path: Assets/Scenes/CornellBoxBunny.unity
+    guid: d85223d2902273b4db7ab723a1414afd
   m_configObjects: {}

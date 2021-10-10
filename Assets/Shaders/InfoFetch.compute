@@ -54,7 +54,7 @@ void CSMain(uint3 id : SV_DispatchThreadID)
     // create camera
     Camera camera = CreateCamera();
     // save pixel center
-    float2 center = float2(id.xy) + camera.offset;
+    float2 center = float2(id.xy);
     PixelCenter = 2.0 * center / float2(width, height) - 1.0;
     // init random seed
     rng_initialize(center, _FrameCount);

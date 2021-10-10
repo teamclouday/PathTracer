@@ -43,10 +43,10 @@ float3 Shade(inout Ray ray, HitInfo hit)
     if (hit.dist < 1.#INF)
     {
         //return hit.norm * 0.5 + 0.5; // debug normal
-
-        // check whether if is light
-        if (dot(hit.colors.emission, 0.3) > 0.9)
+        if (dot(hit.colors.emission, 0.3333333) > 0.9)
         {
+            //ray.dir = normalize(SampleHemisphere3(hit.norm, 0.0));
+            //ray.energy *= saturate(dot(hit.norm, ray.dir));
             ray.energy = 0.0;
             return hit.colors.emission;
         }
@@ -69,20 +69,18 @@ float3 Shade(inout Ray ray, HitInfo hit)
                 ray.dir = normalize(SampleHemisphere3(refract(ray.dir, hit.norm, 1.0 / ior), 100000.0 * kr));
                 ray.energy *= 1.0 / kr * hit.colors.albedo * saturate(dot(-hit.norm, ray.dir));
             }
-            //ray.dir = normalize(refract(ray.dir, hit.norm, 1.0 / ior));
-            //ray.energy *= 2.0 * hit.colors.albedo;
             return hit.colors.emission;
         }
         else
         {
             // opaque workflow
+            float random = rand();
             ray.origin = hit.pos + hit.norm * 1e-5;
             float specChance = dot(hit.colors.specular, 0.333333333333);
             float diffChance = dot(hit.colors.albedo, 0.33333333333);
             float sum = 1.0 / (specChance + diffChance);
             specChance *= sum;
             diffChance *= sum;
-            float random = rand();
             if (random < specChance)
             {
                 float alpha = 100000.0 * hit.smoothness;
@@ -91,18 +89,12 @@ float3 Shade(inout Ray ray, HitInfo hit)
             }
             else
             {
-                ray.dir = normalize(SampleHemisphere3(hit.norm, 1.0));
+                ray.dir = normalize(SampleHemisphere3(hit.norm, 0.0));
                 ray.energy *= 1.0 / diffChance * 2.0 * hit.colors.albedo * saturate(dot(hit.norm, ray.dir));
             }
             return hit.colors.emission;
         }
-        // shadow ray
-        //Ray shadowRay = CreateRay(hit.pos, _DirectionalLight.xyz);
-        //if (TraceHit(shadowRay, 1.#INF))
-        //{
-        //    return hit.emission;
-        //}
-        //return hit.colors.emission + saturate(dot(hit.norm, _DirectionalLight.xyz)) * _DirectionalLight.w * hit.colors.albedo;
+        
     }
     else
     {
@@ -122,17 +114,18 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     // create camera
     Camera camera = CreateCamera();
     // save pixel center
-    float2 center = float2(id.xy) + camera.offset;
-    PixelCenter = 2.0 * center / float2(width, height) - 1.0;
+    float2 center = float2(id.xy);
+    float2 dims = float2(width, height);
+    PixelCenter = 2.0 * (center + camera.offset) / dims - 1.0;
     // init random seed
-    rng_initialize(center, _FrameCount);
+    rng_initialize(center + camera.offset * dims, _FrameCount);
     // generate ray from camera
     Ray ray = CreateCameraRay(camera, PixelCenter);
     // trace ray
     float3 color = 0.0;
     for (int i = 0; i < _TraceDepth; i++)
     {
-        // get best ray hit
+        // get nearest ray hit
         HitInfo hit = Trace(ray);
         // accumulate energy (color)
         color += ray.energy * Shade(ray, hit);

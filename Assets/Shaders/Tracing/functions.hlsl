@@ -85,57 +85,83 @@ bool CullFace(float3 norm, float3 eye, float3 pos)
     return dot(norm, (eye - pos)) < 0.0;
 }
 
+// reference: http://extremelearning.com.au/how-to-generate-uniformly-random-points-on-n-spheres-and-n-balls/
+float3 SampleSphere1()
+{
+    float2 rand = rand2();
+    float u = 2.0 * rand.x - 1.0;
+    float phi = rand.y * PI_TWO;
+    float r = sqrt(1.0 - u * u);
+    return float3(r * cos(phi), r * sin(phi), u);
+}
+
+float3 SampleSphere2()
+{
+    return rand3() * 2.0 - 1.0;
+}
+
 // create new sample direction in a hemisphere
 float3 SampleHemisphere1(float3 norm, float alpha = 0.0)
 {
     float2 rand = rand2();
     float cosTheta = pow(rand.x, 1.0 / (1.0 + alpha));
-    float sinTheta = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
+    float sinTheta = saturate(sqrt(1.0 - cosTheta * cosTheta));
     float phi = PI_TWO * rand.y;
-    float3 tangentSpaceDir = float3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+    float3 dir = float3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
     // from tangent space to world space
-    float3 helper = abs(norm.x) > 0.999 ? float3(0, 0, 1) : float3(1, 0, 0);
-    float3 tangent = normalize(cross(helper, norm));
-    float3 binormal = cross(norm, tangent);
+    float3 helper = abs(norm.x) < 0.99 ? float3(1, 0, 0) : float3(0, 0, 1);
+    float3 tangent = normalize(cross(norm, helper));
+    float3 binormal = normalize(cross(norm, tangent));
     // get new direction
-    return mul(tangentSpaceDir, float3x3(tangent, binormal, norm));
+    return mul(dir, float3x3(tangent, binormal, norm));
+}
+
+float3 SampleHemisphere2(float3 norm)
+{
+    float2 random = rand2();
+    float phi = random.x * PI_TWO;
+    float r = sqrt(1.0 - random.y * random.y);
+    float3 v = float3(r * cos(phi), r * sin(phi), random.y);
+    float3 helper = abs(norm.z) < 0.99 ? float3(0, 0, 1) : float3(1, 0, 0);
+    float3 T = normalize(cross(helper, norm));
+    float3 B = cross(T, norm);
+    return mul(v, float3x3(T, B, norm));
 }
 
 // reference: https://github.com/LWJGL/lwjgl3-demos/blob/main/res/org/lwjgl/demo/opengl/raytracing/randomCommon.glsl
-float3 SampleHemisphere2(float3 norm)
+float3 SampleDiskPoint(float3 norm)
 {
-    float angle = rand() * PI_TWO;
-    float u = rand() * 2.0 - 1.0;
-    float sqrtMinusU2 = sqrt(1.0 - u * u);
-    float3 v = float3(sqrtMinusU2 * cos(angle), sqrtMinusU2 * sin(angle), u);
-    return v * sign(dot(v, norm));
+    float3 rand = rand3();
+    rand.z = rand.z * 2.0 - 1.0;
+    float angle = rand.x * PI_TWO;
+    float sr = sqrt(rand.y);
+    float2 p = float2(sr * cos(angle), sr * sin(angle));
+    float3 tangent = normalize(rand);
+    float3 bitangent = cross(tangent, norm);
+    tangent = cross(bitangent, norm);
+    return tangent * p.x + bitangent * p.y;
 }
 
 float3 SampleHemisphere3(float3 norm, float alpha = 0.0)
 {
-    float3 randomVec = rand3();
-    float r = pow(randomVec.x, 1.0 / (1.0 + alpha));
-    float angle = randomVec.y * PI_TWO;
+    float2 rand = rand2();
+    float r = saturate(pow(rand.x, 1.0 / (1.0 + alpha)));
+    float angle = rand.y * PI_TWO;
     float sr = saturate(sqrt(1.0 - r * r));
     float3 ph = float3(sr * cos(angle), sr * sin(angle), r);
-    float3 tangent = normalize(randomVec * 2.0 - 1.0);
-    float3 bitangent = normalize(cross(tangent, norm));
-    tangent = normalize(cross(bitangent, norm));
+    float3 tangent = normalize(SampleSphere2());
+    float3 bitangent = cross(norm, tangent);
+    tangent = cross(norm, bitangent);
     return mul(ph, float3x3(tangent, bitangent, norm));
 }
 
-float3 SampleHemisphere4(float3 norm, float alpha = 1.0)
+float3 SampleHemisphere4(float3 norm)
 {
-    alpha = 1.0 - alpha; // convert from smoothness to roughness
-    float3 randomVec = rand3();
-    float r = sqrt((1.0 - randomVec.x) / (1.0 + (alpha * alpha - 1.0) * randomVec.x));
-    float angle = randomVec.y * PI_TWO;
-    float sr = saturate(sqrt(1.0 - r * r));
-    float3 ph = float3(sr * cos(angle), sr * sin(angle), r);
-    float3 tangent = normalize(randomVec * 2.0 - 1.0);
-    float3 bitangent = normalize(cross(tangent, norm));
-    tangent = normalize(cross(bitangent, norm));
-    return mul(ph, float3x3(tangent, bitangent, norm));
+    float2 rand = rand2();
+    float theta = rand.x * PI_TWO;
+    float phi = acos(1.0 - 2.0 * rand.y);
+    float3 v = float3(sin(phi) * cos(theta), sin(phi) * sin(theta), cos(phi));
+    return v * sign(dot(v, norm));
 }
 
 // reference: https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/reflection-refraction-fresnel

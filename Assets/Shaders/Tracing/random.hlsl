@@ -5,9 +5,9 @@
 
 //float rand()
 //{
-//    float res = frac(sin(dot(PixelCenter * _Seed, float2(12.9898, 78.233))) * 43758.5453);
+//    float res = frac(sin(dot(_PixelOffset + PixelCenter, float2(12.9898, 78.233))) * 43758.5453);
 //    //_Seed += frac(sin(dot(res * _Seed, float2(12.9898, 78.233))) * 43758.5453);
-//    _Seed += res;
+//    _PixelOffset += res;
 //    return res;
 //}
 
@@ -15,7 +15,7 @@
 void rng_initialize(float2 p, int frame)
 {
     //white noise seed
-    RandomSeed = uint4(p, uint(frame), uint(p.x) + uint(p.y));
+    RandomSeed = uint4(p, frame, p.x + p.y);
     
     //blue noise seed
     //s1 = uvec4(frame, frame * 15843, frame * 31 + 4566, frame * 2345 + 58585);
