@@ -41,12 +41,18 @@ Ray CreateCameraRay(Camera camera, float2 d)
     d.x *= camera.fov_scale;
     d.y *= camera.ratio * camera.fov_scale;
     float3 dir = normalize(d.x * camera.right + d.y * camera.up + camera.forward);
-    float3 cam_r = rand3() * 2.0 - 1.0;
-    // fixed biased distribution caused by cos sin functions in the reference
-    float3 randomAperturePos = (cam_r.x * camera.right + cam_r.y * camera.up) * cam_r.z * camera.aperture;
-    dir = normalize(dir * camera.focalDist - randomAperturePos);
-    return CreateRay(camera.pos + randomAperturePos, dir);
-
+    if (camera.aperture > 0.0)
+    {
+        float3 cam_r = rand3() * 2.0 - 1.0;
+        // fixed biased distribution caused by cos sin functions in the reference
+        float3 randomAperturePos = (cam_r.x * camera.right + cam_r.y * camera.up) * cam_r.z * camera.aperture;
+        dir = normalize(dir * camera.focalDist - randomAperturePos);
+        return CreateRay(camera.pos + randomAperturePos, dir);
+    }
+    else
+    {
+        return CreateRay(camera.pos, dir);
+    }
     //float scale = tan(camera.fov * 0.5f);
     //d.x *= scale;
     //d.y *= camera.ratio * scale;
