@@ -96,6 +96,18 @@ Therefore, the samples contain many dark pixels because the ray is not
 lucky enough to reach a light source.
 A denoiser is required to improve the visual in this case.
 
+### Bunny
+
+Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/bunny)
+
+No new features added.
+Fixed an important bug that occurs during cosine weighted hemisphere sampling.
+Switched to another random value generator that is more convenient.
+Finally, improve the transparent workload for better visual effects. (Not refering to any paper so not physically accurate)
+
+Denoised view:  
+<img src="Images/bunny.png" width="600" alt="bunny">
+
 ------
 
 ### Controls
