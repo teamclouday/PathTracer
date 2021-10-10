@@ -119,7 +119,7 @@ In fact, no matter of its geometric shape, it will tend to scatter a cross shape
 
 No executable available, because it is meant to be tested in Unity editor.
 
-Added pinhole camera, with focal length and aperture.
+Updated camera model, with focal length and aperture.
 
 Denoised view:  
 <img src="Images/bunny_camera.png" width="600" alt="bunny_camera">
