@@ -8,7 +8,7 @@
 Camera CreateCamera()
 {
     Camera camera;
-    camera.fov = _CameraInfo.x;
+    camera.fov_scale = _CameraInfo.x;
     camera.focalDist = _CameraInfo.y;
     camera.aperture = _CameraInfo.z;
     camera.ratio = _CameraInfo.w;
@@ -38,23 +38,20 @@ Ray CreateCameraRay(Camera camera, float2 d)
     //return CreateRay(origin, direction);
     
     // reference: https://github.com/knightcrawler25/GLSL-PathTracer/blob/master/src/shaders/preview.glsl
-    //float2 d = 2.0 * (uv + camera.offset) / dims - 1.0;
+    d.x *= camera.fov_scale;
+    d.y *= camera.ratio * camera.fov_scale;
+    float3 dir = normalize(d.x * camera.right + d.y * camera.up + camera.forward);
+    float3 cam_r = rand3() * 2.0 - 1.0;
+    // fixed biased distribution caused by cos sin functions in the reference
+    float3 randomAperturePos = (cam_r.x * camera.right + cam_r.y * camera.up) * cam_r.z * camera.aperture;
+    dir = normalize(dir * camera.focalDist - randomAperturePos);
+    return CreateRay(camera.pos + randomAperturePos, dir);
+
     //float scale = tan(camera.fov * 0.5f);
     //d.x *= scale;
     //d.y *= camera.ratio * scale;
     //float3 direction = normalize(d.x * camera.right + d.y * camera.up + camera.forward);
-    //float3 focalPoint = direction * camera.focalDist;
-    //float cam_r1 = rand() * PI * 2.0;
-    //float cam_r2 = rand() * camera.aperture;
-    //float3 randomAperturePos = (cos(cam_r1) * camera.right + sin(cam_r1) * camera.up) * sqrt(cam_r2);
-    //float3 finalRayDir = normalize(focalPoint - randomAperturePos);
-    //return CreateRay(camera.pos + randomAperturePos, finalRayDir);
-
-    float scale = tan(camera.fov * 0.5f);
-    d.x *= scale;
-    d.y *= camera.ratio * scale;
-    float3 direction = normalize(d.x * camera.right + d.y * camera.up + camera.forward);
-    return CreateRay(camera.pos, direction);
+    //return CreateRay(camera.pos, direction);
 }
 
 Colors CreateColors(float3 baseColor, float3 emission, float metallic)

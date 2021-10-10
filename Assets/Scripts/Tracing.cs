@@ -21,10 +21,10 @@ public class Tracing : MonoBehaviour
     [SerializeField, Range(2, 20)]
     int TraceDepth = 5;
 
-    [SerializeField, Range(0.01f, 50.0f)]
+    [SerializeField, Range(0.01f, 100.0f)]
     float CameraFocalDistance = 1.0f;
 
-    [SerializeField, Range(0.0f, 10.0f)]
+    [SerializeField, Range(0.0f, 2.0f)]
     float CameraAperture = 0.0f;
 
     [SerializeField]
@@ -127,8 +127,9 @@ public class Tracing : MonoBehaviour
             shader.SetVector("_CameraRight", mainCamera.transform.right);
             shader.SetVector("_CameraForward", mainCamera.transform.forward);
             shader.SetVector("_CameraInfo", new Vector4(
-                Mathf.Deg2Rad * mainCamera.fieldOfView,
+                Mathf.Tan(Mathf.Deg2Rad * mainCamera.fieldOfView * 0.5f),
                 CameraFocalDistance,
+                //Mathf.Sqrt(CameraAperture),
                 CameraAperture,
                 frameTarget.height / (float)frameTarget.width
             ));

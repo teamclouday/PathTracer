@@ -3,7 +3,7 @@
 
 struct Camera
 {
-    float fov;
+    float fov_scale;
     float focalDist;
     float aperture;
     float ratio;

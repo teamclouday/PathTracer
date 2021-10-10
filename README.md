@@ -115,6 +115,15 @@ Can refer to [here](https://stackoverflow.com/questions/69510208/path-tracing-co
 The reason I say it's partially fixed is because though the area light looks fine when it is large, it is still not perfect when it is a small light.
 In fact, no matter of its geometric shape, it will tend to scatter a cross shape distribution of light on the ground.
 
+# Depth of View
+
+No executable available, because it is meant to be tested in Unity editor.
+
+Added pinhole camera, with focal length and aperture.
+
+Denoised view:  
+<img src="Images/bunny_camera.png" width="600" alt="bunny_camera">
+
 ------
 
 ### Controls

@@ -12,7 +12,7 @@ float3 _CameraPos;
 float3 _CameraUp;
 float3 _CameraRight;
 float3 _CameraForward;
-float4 _CameraInfo; // fov, focal distance, aperture, height / width ratio
+float4 _CameraInfo; // fov scale, focal distance, aperture, height / width ratio
 
 // skybox texture
 TextureCube<float4> _SkyboxTexture;
