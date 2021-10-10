@@ -43,14 +43,14 @@ float3 Shade(inout Ray ray, HitInfo hit)
     if (hit.dist < 1.#INF)
     {
         //return hit.norm * 0.5 + 0.5; // debug normal
-        if (dot(hit.colors.emission, 0.3333333) > 0.9)
-        {
-            //ray.dir = normalize(SampleHemisphere3(hit.norm, 0.0));
-            //ray.energy *= saturate(dot(hit.norm, ray.dir));
-            ray.energy = 0.0;
-            return hit.colors.emission;
-        }
-        else if(hit.mode > 0.0)
+        //if (dot(hit.colors.emission, 0.3333333) > 0.9)
+        //{
+        //    //ray.dir = normalize(SampleHemisphere3(hit.norm, 0.0));
+        //    //ray.energy *= saturate(dot(hit.norm, ray.dir));
+        //    ray.energy = 0.0;
+        //    return hit.colors.emission;
+        //}
+        if(hit.mode > 0.0)
         {
             // transparent workflow
             float random = rand();
