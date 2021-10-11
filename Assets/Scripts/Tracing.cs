@@ -13,10 +13,13 @@ public class Tracing : MonoBehaviour
     ComputeShader InfoShader;
 
     [SerializeField]
-    Texture SkyboxTexture;
+    Light DirectionalLight;
 
     [SerializeField]
-    Light DirectionalLight;
+    Texture SkyboxTexture;
+
+    [SerializeField, Range(0.0f, 10.0f)]
+    float SkyboxIntensity = 1.0f;
 
     [SerializeField, Range(2, 20)]
     int TraceDepth = 5;
@@ -135,6 +138,8 @@ public class Tracing : MonoBehaviour
             ));
             // set skybox
             shader.SetTexture(0, "_SkyboxTexture", SkyboxTexture);
+            // set intensity
+            shader.SetFloat("_SkyboxIntensity", SkyboxIntensity);
             // set directional light
             shader.SetVector("_DirectionalLight", directionalLightInfo);
             // set objects info

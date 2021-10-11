@@ -50,31 +50,29 @@ float3 Shade(inout Ray ray, HitInfo hit)
         //    ray.energy = 0.0;
         //    return hit.colors.emission;
         //}
+        float random = rand();
         if(hit.mode > 0.0)
         {
             // transparent workflow
-            float random = rand();
             float ior = hit.smoothness * 2.0 + 1.0;
-            float kr = Fresnel(ray.dir, hit.norm, ior);
+            float kr = saturate(Fresnel(ray.dir, hit.norm, ior));
             float outside = dot(ray.dir, hit.norm);
             ray.origin = hit.pos + sign(outside) * hit.norm * 1e-5;
             if (random < kr)
             {
-                ray.dir = normalize(SampleHemisphere3(reflect(ray.dir, hit.norm), 100000.0 * kr));
+                ray.dir = normalize(SampleHemisphere3(reflect(ray.dir, hit.norm), 10000.0 * kr));
                 ray.energy *= 1.0 / kr * hit.colors.specular * saturate(dot(hit.norm, ray.dir));
             }
             else
             {
-                kr = saturate(1.0 - kr);
-                ray.dir = normalize(SampleHemisphere3(refract(ray.dir, hit.norm, 1.0 / ior), 100000.0 * kr));
+                kr = 1.0 - kr;
+                ray.dir = normalize(SampleHemisphere3(refract(ray.dir, hit.norm, 1.0 / ior), 10000.0 * kr));
                 ray.energy *= 1.0 / kr * hit.colors.albedo * saturate(dot(-hit.norm, ray.dir));
             }
-            return hit.colors.emission;
         }
         else
         {
             // opaque workflow
-            float random = rand();
             ray.origin = hit.pos + hit.norm * 1e-5;
             float specChance = dot(hit.colors.specular, 0.333333333333);
             float diffChance = dot(hit.colors.albedo, 0.33333333333);
@@ -83,17 +81,17 @@ float3 Shade(inout Ray ray, HitInfo hit)
             diffChance *= sum;
             if (random < specChance)
             {
-                float alpha = 100000.0 * hit.smoothness;
+                float alpha = 10000.0 * hit.smoothness * hit.smoothness;
                 ray.dir = normalize(SampleHemisphere3(reflect(ray.dir, hit.norm), alpha));
-                ray.energy *= 1.0 / specChance * 2.0 * hit.colors.specular * saturate(dot(hit.norm, ray.dir));
+                ray.energy *= 1.0 / specChance * hit.colors.specular * saturate(dot(hit.norm, ray.dir));
             }
             else
             {
                 ray.dir = normalize(SampleHemisphere3(hit.norm, 0.0));
                 ray.energy *= 1.0 / diffChance * 2.0 * hit.colors.albedo * saturate(dot(hit.norm, ray.dir));
             }
-            return hit.colors.emission;
         }
+        return hit.colors.emission;
         
     }
     else
@@ -101,7 +99,7 @@ float3 Shade(inout Ray ray, HitInfo hit)
         // hit skybox
         ray.energy = 0.0;
         float raySampleScale = max(max(abs(ray.dir.x), abs(ray.dir.y)), abs(ray.dir.z));
-        return _SkyboxTexture.SampleLevel(sampler_SkyboxTexture, ray.dir / raySampleScale, 0).xyz;
+        return _SkyboxTexture.SampleLevel(sampler_SkyboxTexture, ray.dir / raySampleScale, 0).xyz * _SkyboxIntensity;
     }
 }
 
@@ -115,12 +113,10 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     Camera camera = CreateCamera();
     // save pixel center
     float2 center = float2(id.xy);
-    float2 dims = float2(width, height);
-    PixelCenter = 2.0 * (center + camera.offset) / dims - 1.0;
     // init random seed
-    rng_initialize(center + camera.offset * dims, _FrameCount);
+    rng_initialize(center, _FrameCount);
     // generate ray from camera
-    Ray ray = CreateCameraRay(camera, PixelCenter);
+    Ray ray = CreateCameraRay(camera, 2.0 * (center + camera.offset) / float2(width, height) - 1.0);
     // trace ray
     float3 color = 0.0;
     for (int i = 0; i < _TraceDepth; i++)

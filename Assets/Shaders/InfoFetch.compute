@@ -41,7 +41,7 @@ float3 Shade(inout Ray ray, HitInfo hit)
     {
         // hit skybox
         float raySampleScale = max(max(abs(ray.dir.x), abs(ray.dir.y)), abs(ray.dir.z));
-        return _SkyboxTexture.SampleLevel(sampler_SkyboxTexture, ray.dir / raySampleScale, 0).xyz;
+        return _SkyboxTexture.SampleLevel(sampler_SkyboxTexture, ray.dir / raySampleScale, 0).xyz * _SkyboxIntensity;
     }
 }
 
@@ -55,11 +55,10 @@ void CSMain(uint3 id : SV_DispatchThreadID)
     Camera camera = CreateCamera();
     // save pixel center
     float2 center = float2(id.xy);
-    PixelCenter = 2.0 * center / float2(width, height) - 1.0;
     // init random seed
     rng_initialize(center, _FrameCount);
     // generate ray from camera
-    Ray ray = CreateCameraRay(camera, PixelCenter);
+    Ray ray = CreateCameraRay(camera, 2.0 * (center + camera.offset) / float2(width, height) - 1.0);
     // trace ray
     HitInfo hit = Trace(ray);
     // write albedo

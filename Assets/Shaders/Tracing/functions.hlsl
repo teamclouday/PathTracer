@@ -147,12 +147,13 @@ float3 SampleDiskPoint(float3 norm)
 
 float3 SampleHemisphere3(float3 norm, float alpha = 0.0)
 {
-    float2 rand = rand2();
-    float r = saturate(pow(rand.x, 1.0 / (1.0 + alpha)));
+    float4 rand = rand4();
+    float r = pow(rand.w, 1.0 / (1.0 + alpha));
     float angle = rand.y * PI_TWO;
-    float sr = saturate(sqrt(1.0 - r * r));
+    float sr = sqrt(1.0 - r * r);
     float3 ph = float3(sr * cos(angle), sr * sin(angle), r);
-    float3 tangent = normalize(SampleSphere2());
+    //float3 tangent = normalize(SampleSphere2());
+    float3 tangent = normalize(rand.zyx + rand3() - 1.0);
     float3 bitangent = cross(norm, tangent);
     tangent = cross(norm, bitangent);
     return mul(ph, float3x3(tangent, bitangent, norm));

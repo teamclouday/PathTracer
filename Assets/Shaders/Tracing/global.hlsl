@@ -18,6 +18,9 @@ float4 _CameraInfo; // fov scale, focal distance, aperture, height / width ratio
 TextureCube<float4> _SkyboxTexture;
 SamplerState sampler_SkyboxTexture;
 
+// skybox intensity
+float _SkyboxIntensity;
+
 // random offset in pixel
 float2 _PixelOffset;
 
@@ -77,7 +80,7 @@ StructuredBuffer<float3> _Normals;
 StructuredBuffer<float4x4> _Transforms;
 
 // current pixel center
-float2 PixelCenter;
+//float2 PixelCenter;
 uint4 RandomSeed;
 
 // define PI value

@@ -229,15 +229,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 9df3bfe8e84d85e46bde850fda510b68, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.1
+      value: 0.005
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 9df3bfe8e84d85e46bde850fda510b68, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.1
+      value: 0.005
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 9df3bfe8e84d85e46bde850fda510b68, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.1
+      value: 0.005
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 9df3bfe8e84d85e46bde850fda510b68, type: 3}
       propertyPath: m_LocalPosition.x
@@ -399,8 +399,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   RayTracingShader: {fileID: 7200000, guid: 665d1ef5183a88c43ad98a3cf93e0ddd, type: 3}
   InfoShader: {fileID: 7200000, guid: b9568c70d14d4ae49a257b1843b38f9a, type: 3}
-  SkyboxTexture: {fileID: 8900000, guid: b5048f0d8dca2ee41aaf9a2aecf4fa94, type: 2}
   DirectionalLight: {fileID: 347521809}
+  SkyboxTexture: {fileID: 8900000, guid: b5048f0d8dca2ee41aaf9a2aecf4fa94, type: 2}
+  SkyboxIntensity: 1
   TraceDepth: 5
   CameraFocalDistance: 1
   CameraAperture: 0
