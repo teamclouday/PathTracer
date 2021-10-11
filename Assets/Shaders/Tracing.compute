@@ -114,7 +114,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     // save pixel center
     float2 center = float2(id.xy);
     // init random seed
-    rng_initialize(center, _FrameCount);
+    rng_initialize(dot(center, camera.offset), _FrameCount);
     // generate ray from camera
     Ray ray = CreateCameraRay(camera, 2.0 * (center + camera.offset) / float2(width, height) - 1.0);
     // trace ray

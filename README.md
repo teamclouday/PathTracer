@@ -124,6 +124,18 @@ Updated camera model, with focal length and aperture.
 Denoised view:  
 <img src="Images/bunny_camera.png" width="600" alt="bunny_camera">
 
+### Paper Effect
+
+This is done by playing with `rng_initialize`:  
+```hlsl
+float2 center = float2(id.xy);
+rng_initialize(dot(center, camera.offset), _FrameCount);
+```
+where `camera.offset` is just another vector of independent random values.
+
+The result looks as if it is drawn on a paper, and it is cool without any denoising:  
+<img src="Images/paperbunny.png" width="600" alt="paperbunny">
+
 ------
 
 ### Controls
