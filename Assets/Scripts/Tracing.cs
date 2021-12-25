@@ -137,11 +137,11 @@ public class Tracing : MonoBehaviour
             shader.SetVector("_CameraRight", mainCamera.transform.right);
             shader.SetVector("_CameraForward", mainCamera.transform.forward);
             shader.SetVector("_CameraInfo", new Vector4(
-                Mathf.Tan(Mathf.Deg2Rad * mainCamera.fieldOfView * 0.75f),
+                Mathf.Tan(Mathf.Deg2Rad * mainCamera.fieldOfView * 0.5f),
                 CameraFocalDistance,
                 //Mathf.Sqrt(CameraAperture),
                 CameraAperture,
-                frameTarget.height / (float)frameTarget.width
+                frameTarget.width / (float)frameTarget.height
             ));
             // set skybox
             shader.SetTexture(0, "_SkyboxTexture", SkyboxTexture);
@@ -272,6 +272,12 @@ public class Tracing : MonoBehaviour
         {
             EnableDenoiser = !EnableDenoiser;
             Debug.Log("Denoiser " + (EnableDenoiser ? "enabled" : "disabled"));
+        }
+        // press ctrl + R to reload materials
+        if(Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.R) && Application.isEditor)
+        {
+            ObjectManager.ReloadMaterials();
+            ResetSamples();
         }
     }
 

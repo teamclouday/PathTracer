@@ -247,6 +247,32 @@ public class ObjectManager
         return true;
     }
 
+    public static void ReloadMaterials()
+    {
+        int matIdx = 1;
+        // get info from each object
+        foreach (var obj in objects)
+        {
+            // load materials
+            var meshMats = obj.GetComponent<Renderer>().sharedMaterials;
+            foreach (var mat in meshMats)
+            {
+                materials[matIdx] = new MaterialData()
+                {
+                    Color = ColorToVector(mat.color),
+                    Emission = mat.IsKeywordEnabled("_EMISSION") ? ColorToVector(mat.GetColor("_EmissionColor")) : Vector3.zero,
+                    Metallic = mat.GetFloat("_Metallic"),
+                    Smoothness = mat.GetFloat("_Glossiness"),
+                    RenderMode = mat.GetFloat("_Mode"),
+                    DiffuseIdx = materials[matIdx].DiffuseIdx
+                };
+                matIdx++;
+            }
+        }
+        UpdateBuffer(ref MaterialBuffer, materials, MaterialData.TypeSize);
+        Debug.Log("Materials reloaded");
+    }
+
     private static void UpdateBuffer<T>(ref ComputeBuffer buffer, List<T> data, int stride) where T : struct
     {
         if(buffer != null) buffer.Release();

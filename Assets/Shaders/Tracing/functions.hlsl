@@ -38,8 +38,8 @@ Ray CreateCameraRay(Camera camera, float2 d)
     //return CreateRay(origin, direction);
     
     // reference: https://github.com/knightcrawler25/GLSL-PathTracer/blob/master/src/shaders/preview.glsl
-    d.x *= camera.fov_scale;
-    d.y *= camera.ratio * camera.fov_scale;
+    d.x *= camera.ratio * camera.fov_scale;
+    d.y *= camera.fov_scale;
     float3 dir = normalize(d.x * camera.right + d.y * camera.up + camera.forward);
     if (camera.aperture > 0.0)
     {
