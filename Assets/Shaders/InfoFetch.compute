@@ -23,7 +23,7 @@ HitInfo Trace(Ray ray)
         {
             // intersect with BLAS tree
             PrepareTreeEnterHit(localRay, bestHit, node.transformIdx);
-            InersectBVHTree(localRay, bestHit, node.rootIdx, node.transformIdx);
+            IntersectBVHTree(localRay, bestHit, node.rootIdx, node.transformIdx);
             PrepareTreeExit(ray, bestHit, node.transformIdx);
         }
     }

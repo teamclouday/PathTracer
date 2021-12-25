@@ -9,9 +9,23 @@
 // trace a ray and returns hit immediately (for shadow rays)
 bool TraceHit(Ray ray, float targetDist)
 {
-    //uint count, stride, i;
-    //if (IntersectBVHTreeFast(ray, 0, targetDist))
-    //    return true;
+    HitInfo bestHit = CreateHitInfo();
+    // check tlas intersection
+    uint size, stride;
+    _TNodes.GetDimensions(size, stride);
+    for (uint i = 0; i < size; i++)
+    {
+        TLASNode node = _TNodes[i];
+        Ray localRay = PrepareTreeEnterRay(ray, node.transformIdx);
+        if (IntersectBox2(localRay, node.boundMax, node.boundMin))
+        {
+            // intersect with BLAS tree
+            PrepareTreeEnterHit(localRay, bestHit, node.transformIdx);
+            if (IntersectBVHTreeFast(localRay, node.rootIdx, targetDist))
+                return true;
+            PrepareTreeExit(ray, bestHit, node.transformIdx);
+        }
+    }
     return false;
 }
 
@@ -30,7 +44,7 @@ HitInfo Trace(Ray ray)
         {
             // intersect with BLAS tree
             PrepareTreeEnterHit(localRay, bestHit, node.transformIdx);
-            InersectBVHTree(localRay, bestHit, node.rootIdx, node.transformIdx);
+            IntersectBVHTree(localRay, bestHit, node.rootIdx, node.transformIdx);
             PrepareTreeExit(ray, bestHit, node.transformIdx);
         }
     }
@@ -42,15 +56,6 @@ float3 Shade(inout Ray ray, HitInfo hit)
 {
     if (hit.dist < 1.#INF)
     {
-        //return hit.norm * 0.5 + 0.5; // debug normal
-        //if (dot(hit.colors.emission, 0.3333333) > 0.9)
-        //{
-        //    ray.origin = hit.pos + hit.norm * 1e-5;
-        //    ray.dir = reflect(ray.dir, hit.norm);
-        //    //ray.energy *= hit.colors.emission * saturate(dot(hit.norm, ray.dir));
-        //    //ray.energy *= saturate(dot(hit.norm, ray.dir));
-        //    //ray.energy = 0.0;
-        //}
         float random = rand();
         if(hit.mode > 0.0)
         {

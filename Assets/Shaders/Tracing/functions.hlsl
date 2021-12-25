@@ -66,9 +66,14 @@ Colors CreateColors(float3 baseColor, float3 emission, float metallic,
     const float alpha = 0.04;
     if(albedoIdx >= 0)
     {
-        float3 albedo = _AlbedoTextures.SampleLevel(
-            sampler_AlbedoTextures, float3(uv, float(albedoIdx)), 0.0).xyz;
-        baseColor = baseColor * albedo;
+        // fetch albedo color
+        // and convert from srgb space
+        float3 albedo = pow(_AlbedoTextures.SampleLevel(
+                sampler_AlbedoTextures, float3(uv, float(albedoIdx)), 0.0
+            ).xyz,
+            SRGB_CONVERT
+        );
+        baseColor = baseColor * albedo;    
     }
     Colors colors;
     colors.albedo = lerp(baseColor * (1.0 - alpha), 0.0, metallic);

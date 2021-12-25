@@ -173,7 +173,7 @@ bool IntersectMeshObjectFast(Ray ray, MeshData mesh, float targetDist)
 
 // test intersection with BVH tree
 // reference: https://github.com/knightcrawler25/GLSL-PathTracer/blob/master/src/shaders/common/closest_hit.glsl
-void InersectBVHTree(Ray ray, inout HitInfo bestHit, int startIdx, int transformIdx)
+void IntersectBVHTree(Ray ray, inout HitInfo bestHit, int startIdx, int transformIdx)
 {
     int stack[BVHTREE_RECURSE_SIZE];
     int stackPtr = 0;

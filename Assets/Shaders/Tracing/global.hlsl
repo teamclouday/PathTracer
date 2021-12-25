@@ -89,6 +89,8 @@ SamplerState sampler_AlbedoTextures;
 uint4 RandomSeed;
 
 // define PI value
-const float PI =        3.14159265358979323846;
-const float PI_TWO =    6.28318530717958623198;
+#define PI              3.14159265358979323846
+#define PI_TWO          6.28318530717958623198
+// define sRGB conversion value
+#define SRGB_CONVERT    0.45454545454545454545
 #endif
