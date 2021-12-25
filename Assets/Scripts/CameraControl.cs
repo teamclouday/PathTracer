@@ -47,13 +47,13 @@ public class CameraControl : MonoBehaviour
         {
             _mouseDown = true;
             _mousePos = Input.mousePosition;
-            Tracing.ComputeLock = true;
+            ToggleComputeControl();
         }
         // check for click and drag
         if (Input.GetMouseButtonUp(0))
         {
             _mouseDown = false;
-            Tracing.ComputeLock = false;
+            ToggleComputeControl();
         }
         if(_mouseDown)
         {
@@ -103,5 +103,21 @@ public class CameraControl : MonoBehaviour
     {
         transform.position = _pos;
         transform.LookAt(_pos + _dir);
+    }
+
+    private void ToggleComputeControl()
+    {
+        Tracing.ComputeLock = !Tracing.ComputeLock;
+        Camera currentCamera = GetComponent<Camera>();
+        if(Tracing.ComputeLock)
+        {
+            currentCamera.clearFlags = CameraClearFlags.Skybox;
+            currentCamera.cullingMask = 1 << LayerMask.NameToLayer("Default");
+        }
+        else
+        {
+            currentCamera.clearFlags = CameraClearFlags.Nothing;
+            currentCamera.cullingMask = 0;
+        }
     }
 }

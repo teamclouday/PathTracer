@@ -45,10 +45,11 @@ float3 Shade(inout Ray ray, HitInfo hit)
         //return hit.norm * 0.5 + 0.5; // debug normal
         //if (dot(hit.colors.emission, 0.3333333) > 0.9)
         //{
-        //    //ray.dir = normalize(SampleHemisphere3(hit.norm, 0.0));
+        //    ray.origin = hit.pos + hit.norm * 1e-5;
+        //    ray.dir = reflect(ray.dir, hit.norm);
+        //    //ray.energy *= hit.colors.emission * saturate(dot(hit.norm, ray.dir));
         //    //ray.energy *= saturate(dot(hit.norm, ray.dir));
-        //    ray.energy = 0.0;
-        //    return hit.colors.emission;
+        //    //ray.energy = 0.0;
         //}
         float random = rand();
         if(hit.mode > 0.0)
@@ -114,7 +115,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     // save pixel center
     float2 center = float2(id.xy);
     // init random seed
-    rng_initialize(dot(center, camera.offset), _FrameCount);
+    rng_initialize(center, _FrameCount);
     // generate ray from camera
     Ray ray = CreateCameraRay(camera, 2.0 * (center + camera.offset) / float2(width, height) - 1.0);
     // trace ray
@@ -126,7 +127,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
         // accumulate energy (color)
         color += ray.energy * Shade(ray, hit);
         // if ray has no energy, stop tracing
-        if(!any(ray.energy))
+        if (!any(ray.energy))
             break;
     }
     // write to frame target

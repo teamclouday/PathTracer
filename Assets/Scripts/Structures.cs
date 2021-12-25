@@ -25,8 +25,9 @@ public struct MaterialData
     public float Metallic;
     public float Smoothness;
     public float RenderMode;
+    public int DiffuseIdx;
 
-    public static int TypeSize = sizeof(float)*3*2+sizeof(float)*3;
+    public static int TypeSize = sizeof(float)*3*2+sizeof(float)*3+sizeof(int);
 }
 
 /// <summary>
@@ -59,26 +60,30 @@ public struct TLASNode
 /// </summary>
 public class ObjectManager
 {
-    private static readonly List<GameObject> objects = new List<GameObject>();
-    private static readonly List<Vector3> vertices = new List<Vector3>();
-    private static readonly List<Vector3> normals = new List<Vector3>();
-    private static readonly List<MaterialData> materials = new List<MaterialData>();
+    private static List<GameObject> objects = new List<GameObject>();
+    private static List<Vector3> vertices = new List<Vector3>();
+    private static List<Vector2> uvs = new List<Vector2>();
+    private static List<Vector3> normals = new List<Vector3>();
+    private static List<MaterialData> materials = new List<MaterialData>();
 
     // TLAS, BLAS
-    private static readonly List<BLASNode> bnodes = new List<BLASNode>();
-    private static readonly List<TLASNode> tnodes = new List<TLASNode>();
+    private static List<BLASNode> bnodes = new List<BLASNode>();
+    private static List<TLASNode> tnodes = new List<TLASNode>();
     // size of objects * 2, local to world & world to local transform
-    private static readonly List<Matrix4x4> transforms = new List<Matrix4x4>();
+    private static List<Matrix4x4> transforms = new List<Matrix4x4>();
+    public static BVHType BVHConstructorType = BVHType.SAH;
 
     private static List<int> indices = new List<int>();
 
     public static ComputeBuffer VertexBuffer;
+    public static ComputeBuffer UVBuffer;
     public static ComputeBuffer IndexBuffer;
     public static ComputeBuffer NormalBuffer;
     public static ComputeBuffer MaterialBuffer;
     public static ComputeBuffer BLASBuffer;
     public static ComputeBuffer TLASBuffer;
     public static ComputeBuffer TransformBuffer;
+    public static Texture2DArray AlbedoTextures = null;
 
     private static bool objectUpdated = false;
     private static bool objectTransformUpdated = false;
@@ -123,11 +128,14 @@ public class ObjectManager
         if (!objectUpdated) return false;
 
         vertices.Clear();
+        uvs.Clear();
         indices.Clear();
         normals.Clear();
         materials.Clear();
         bnodes.Clear();
         tnodes.Clear();
+
+        List<Texture2D> textures = new List<Texture2D>();
 
         // add default material if submesh does not have a material
         materials.Add(new MaterialData()
@@ -136,7 +144,8 @@ public class ObjectManager
             Emission = Vector3.zero,
             Metallic = 0.0f,
             Smoothness = 0.0f,
-            RenderMode = 0
+            RenderMode = 0,
+            DiffuseIdx = -1
         });
 
         // get info from each object
@@ -149,6 +158,16 @@ public class ObjectManager
             int matCount = meshMats.Length;
             foreach(var mat in meshMats)
             {
+                int textureIdx = -1;
+                if (mat.mainTexture != null)
+                {
+                    textureIdx = textures.IndexOf(mat.mainTexture as Texture2D);
+                    if(textureIdx < 0)
+                    {
+                        textureIdx = textures.Count;
+                        textures.Add(mat.mainTexture as Texture2D);
+                    }
+                }
                 materials.Add(new MaterialData()
                 {
                     Color = ColorToVector(mat.color),
@@ -156,34 +175,43 @@ public class ObjectManager
                     // assuming standard unity shader
                     Metallic = mat.GetFloat("_Metallic"),
                     Smoothness = mat.GetFloat("_Glossiness"), // smoothness
-                    RenderMode = mat.GetFloat("_Mode") // 0 for opaque, > 0 for transparent
+                    RenderMode = mat.GetFloat("_Mode"), // 0 for opaque, > 0 for transparent
+                    DiffuseIdx = textureIdx // texture index for albedo map, -1 if not exist
                 });
             }
 
             var mesh = obj.GetComponent<MeshFilter>().sharedMesh;
             var meshVertices = mesh.vertices.ToList();
             var meshNormals = mesh.normals;
+            var meshUVs = mesh.uv;
             int vertexStart = vertices.Count;
             
             for(int i = 0; i < mesh.subMeshCount; i++)
             {
                 var submeshIndices = mesh.GetIndices(i).ToList();
-                BVH blasTree = new BVH(meshVertices, submeshIndices);
-                blasTree.Flatten(indices, submeshIndices, vertexStart, bnodes, tnodes, i < matCount ? i + matStart : 0, idx);
+                BVH blasTree = BVH.Construct(meshVertices, submeshIndices, BVHConstructorType);
+                blasTree.Flatten(ref indices, ref bnodes, ref tnodes, submeshIndices, vertexStart, i < matCount ? i + matStart : 0, idx);
             }
 
             vertices.AddRange(meshVertices);
+            uvs.AddRange(meshUVs);
             normals.AddRange(meshNormals);
             if (meshNormals.Length != meshVertices.Count)
                 Debug.LogError("Object " + obj.name + " has different normals and vertices size");
+            if (meshUVs.Length != meshVertices.Count)
+                Debug.LogError("Object " + obj.name + " has different uvs and vertices size");
         }
 
         UpdateBuffer(ref IndexBuffer, indices, sizeof(int));
         UpdateBuffer(ref VertexBuffer, vertices, sizeof(float) * 3);
+        UpdateBuffer(ref UVBuffer, uvs, sizeof(float) * 2);
         UpdateBuffer(ref NormalBuffer, normals, sizeof(float) * 3);
         UpdateBuffer(ref MaterialBuffer, materials, MaterialData.TypeSize);
         UpdateBuffer(ref BLASBuffer, bnodes, BLASNode.TypeSize);
         UpdateBuffer(ref TLASBuffer, tnodes, TLASNode.TypeSize);
+
+        // create texture 2d array
+        CreateAlbedoTexture(ref textures);
 
         // final report
         Debug.Log(
@@ -193,7 +221,8 @@ public class ObjectManager
             "Total vertices = " + vertices.Count + "\n" +
             "Total indices = " + indices.Count + "\n" +
             "Total normals = " + normals.Count + "\n" +
-            "Total materials = " + materials.Count
+            "Total materials = " + materials.Count + "\n" +
+            "Total textures = " + textures.Count
         );
 
         objectUpdated = false;
@@ -231,14 +260,52 @@ public class ObjectManager
         if (IndexBuffer != null) IndexBuffer.Release();
         if (VertexBuffer != null) VertexBuffer.Release();
         if (NormalBuffer != null) NormalBuffer.Release();
+        if (UVBuffer != null) UVBuffer.Release();
         if (MaterialBuffer != null) MaterialBuffer.Release();
         if (TLASBuffer != null) TLASBuffer.Release();
         if (BLASBuffer != null) BLASBuffer.Release();
         if (TransformBuffer != null) TransformBuffer.Release();
+        if (AlbedoTextures != null) DestroyAlbedoTexture();
     }
 
     private static Vector3 ColorToVector(Color color)
     {
         return new Vector3(color.r, color.g, color.b);
+    }
+
+    private static void CreateAlbedoTexture(ref List<Texture2D> textures)
+    {
+        if (AlbedoTextures != null) DestroyAlbedoTexture();
+        int texWidth = 1, texHeight = 1;
+        foreach (Texture tex in textures)
+        {
+            texWidth = Mathf.Max(texWidth, tex.width);
+            texHeight = Mathf.Max(texHeight, tex.height);
+        }
+        AlbedoTextures = new Texture2DArray(
+            texWidth, texHeight, Mathf.Max(1, textures.Count),
+            TextureFormat.ARGB32, true, false
+        );
+        AlbedoTextures.SetPixels(Enumerable.Repeat(Color.white, texWidth * texHeight).ToArray(), 0, 0);
+        RenderTexture rt = new RenderTexture(texWidth, texHeight, 1, RenderTextureFormat.ARGB32);
+        Texture2D tmp = new Texture2D(texWidth, texHeight, TextureFormat.ARGB32, false);
+        for (int i = 0; i < textures.Count; i++)
+        {
+            RenderTexture.active = rt;
+            Graphics.Blit(textures[i], rt);
+            tmp.ReadPixels(new Rect(0, 0, texWidth, texHeight), 0, 0);
+            tmp.Apply();
+            AlbedoTextures.SetPixels(tmp.GetPixels(0), i, 0);
+        }
+        AlbedoTextures.Apply();
+        RenderTexture.active = null;
+        UnityEngine.Object.Destroy(rt);
+        UnityEngine.Object.Destroy(tmp);
+    }
+
+    private static void DestroyAlbedoTexture()
+    {
+        if (AlbedoTextures != null) UnityEngine.Object.Destroy(AlbedoTextures);
+        AlbedoTextures = null;
     }
 }

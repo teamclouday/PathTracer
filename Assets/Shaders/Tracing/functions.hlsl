@@ -60,9 +60,16 @@ Ray CreateCameraRay(Camera camera, float2 d)
     //return CreateRay(camera.pos, direction);
 }
 
-Colors CreateColors(float3 baseColor, float3 emission, float metallic)
+Colors CreateColors(float3 baseColor, float3 emission, float metallic,
+    int albedoIdx = -1, float2 uv = 0.0)
 {
     const float alpha = 0.04;
+    if(albedoIdx >= 0)
+    {
+        float3 albedo = _AlbedoTextures.SampleLevel(
+            sampler_AlbedoTextures, float3(uv, float(albedoIdx)), 0.0).xyz;
+        baseColor = baseColor * albedo;
+    }
     Colors colors;
     colors.albedo = lerp(baseColor * (1.0 - alpha), 0.0, metallic);
     colors.specular = lerp(alpha, baseColor, metallic);

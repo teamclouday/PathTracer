@@ -71,13 +71,18 @@ struct MaterialData
     float metallic;
     float smoothness;
     float mode;
+    int albedoIdx;
 };
 StructuredBuffer<MaterialData> _Materials;
 
 StructuredBuffer<float3> _Vertices;
 StructuredBuffer<int> _Indices;
 StructuredBuffer<float3> _Normals;
+StructuredBuffer<float2> _UVs;
 StructuredBuffer<float4x4> _Transforms;
+
+Texture2DArray<float4> _AlbedoTextures;
+SamplerState sampler_AlbedoTextures;
 
 // current pixel center
 //float2 PixelCenter;

@@ -56,8 +56,15 @@ public class Tracing : MonoBehaviour
 
     private void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
-        GetSceneInfo();
-        Render(destination);
+        if(ComputeLock)
+        {
+            Graphics.Blit(source, destination);
+        }
+        else
+        {
+            GetSceneInfo();
+            Render(destination);
+        }
     }
 
     private void GetSceneInfo()
@@ -116,7 +123,7 @@ public class Tracing : MonoBehaviour
         // random pixel offset
         shader.SetVector("_PixelOffset", GeneratePixelOffset());
         // trace depth
-        shader.SetInt("_TraceDepth", ComputeLock ? 2 : TraceDepth);
+        shader.SetInt("_TraceDepth", TraceDepth);
         // random seed
         //shader.SetFloat("_Seed", Random.value);
         // frame count
@@ -130,7 +137,7 @@ public class Tracing : MonoBehaviour
             shader.SetVector("_CameraRight", mainCamera.transform.right);
             shader.SetVector("_CameraForward", mainCamera.transform.forward);
             shader.SetVector("_CameraInfo", new Vector4(
-                Mathf.Tan(Mathf.Deg2Rad * mainCamera.fieldOfView * 0.5f),
+                Mathf.Tan(Mathf.Deg2Rad * mainCamera.fieldOfView * 0.75f),
                 CameraFocalDistance,
                 //Mathf.Sqrt(CameraAperture),
                 CameraAperture,
@@ -146,11 +153,12 @@ public class Tracing : MonoBehaviour
             if (ObjectManager.VertexBuffer != null) shader.SetBuffer(0, "_Vertices", ObjectManager.VertexBuffer);
             if (ObjectManager.IndexBuffer != null) shader.SetBuffer(0, "_Indices", ObjectManager.IndexBuffer);
             if (ObjectManager.NormalBuffer != null) shader.SetBuffer(0, "_Normals", ObjectManager.NormalBuffer);
+            if (ObjectManager.UVBuffer != null) shader.SetBuffer(0, "_UVs", ObjectManager.UVBuffer);
             if (ObjectManager.MaterialBuffer != null) shader.SetBuffer(0, "_Materials", ObjectManager.MaterialBuffer);
             if (ObjectManager.TLASBuffer != null) shader.SetBuffer(0, "_TNodes", ObjectManager.TLASBuffer);
             if (ObjectManager.BLASBuffer != null) shader.SetBuffer(0, "_BNodes", ObjectManager.BLASBuffer);
             if (ObjectManager.TransformBuffer != null) shader.SetBuffer(0, "_Transforms", ObjectManager.TransformBuffer);
-
+            if (ObjectManager.AlbedoTextures != null) shader.SetTexture(0, "_AlbedoTextures", ObjectManager.AlbedoTextures);
         }
     }
 
