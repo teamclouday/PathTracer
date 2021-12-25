@@ -136,6 +136,29 @@ where `camera.offset` is just another vector of independent random values.
 The result looks as if it is drawn on a paper, and it is cool without any denoising:  
 <img src="Images/paperbunny.png" width="600" alt="paperbunny">
 
+### Sponza
+
+Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/sponza)
+
+Added SAH to improve BVH reference efficiency.  
+Added support for albedo texture maps. Textures are first combined to a `Texture2DArray` object and then bound to compute shaders. Each texture is resized to the max size of all textures.
+
+Scene Info:
+```
+TLAS nodes = 395
+BLAS nodes = 501469
+Total vertices = 192254
+Total indices = 786873
+Total normals = 192254
+Total materials = 396
+Total textures = 24
+```
+Expect a low fps (about 3-5).
+
+Denoised views:  
+<img src="Images/sponza_lion.png" width="600" alt="sponza_lion">  
+<img src="Images/sponza_down.png" width="600" alt="sponza_down">
+
 ------
 
 ### Controls
