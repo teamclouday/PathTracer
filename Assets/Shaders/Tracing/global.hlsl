@@ -72,6 +72,7 @@ struct MaterialData
     float smoothness;
     float mode;
     int albedoIdx;
+    int emitIdx;
 };
 StructuredBuffer<MaterialData> _Materials;
 
@@ -83,6 +84,8 @@ StructuredBuffer<float4x4> _Transforms;
 
 Texture2DArray<float4> _AlbedoTextures;
 SamplerState sampler_AlbedoTextures;
+Texture2DArray<float4> _EmitTextures;
+SamplerState sampler_EmitTextures;
 
 // current pixel center
 //float2 PixelCenter;

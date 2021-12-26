@@ -129,7 +129,7 @@ void IntersectMeshObject(Ray ray, inout HitInfo bestHit, MeshData mesh)
                 bestHit.norm = normalize(norm);
                 bestHit.colors = CreateColors(
                     mat.color, mat.emission, mat.metallic,
-                    mat.albedoIdx, uv
+                    mat.albedoIdx, mat.emitIdx, uv
                 );
                 bestHit.smoothness = mat.smoothness;
                 bestHit.mode = mat.mode;
@@ -220,7 +220,7 @@ void IntersectBVHTree(Ray ray, inout HitInfo bestHit, int startIdx, int transfor
                             bestHit.norm = normalize(mul(localToWorld, float4(norm, 0.0)).xyz);
                             bestHit.colors = CreateColors(
                                 mat.color, mat.emission, mat.metallic,
-                                mat.albedoIdx, uv
+                                mat.albedoIdx, mat.emitIdx, uv
                             );
                             bestHit.smoothness = mat.smoothness;
                             bestHit.mode = mat.mode;

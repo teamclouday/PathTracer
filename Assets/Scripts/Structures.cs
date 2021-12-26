@@ -25,9 +25,10 @@ public struct MaterialData
     public float Metallic;
     public float Smoothness;
     public float RenderMode;
-    public int DiffuseIdx;
+    public int AlbedoIdx;
+    public int EmitIdx;
 
-    public static int TypeSize = sizeof(float)*3*2+sizeof(float)*3+sizeof(int);
+    public static int TypeSize = sizeof(float)*3*2+sizeof(float)*3+sizeof(int)*2;
 }
 
 /// <summary>
@@ -84,6 +85,7 @@ public class ObjectManager
     public static ComputeBuffer TLASBuffer;
     public static ComputeBuffer TransformBuffer;
     public static Texture2DArray AlbedoTextures = null;
+    public static Texture2DArray EmissionTextures = null;
 
     private static bool objectUpdated = false;
     private static bool objectTransformUpdated = false;
@@ -135,7 +137,8 @@ public class ObjectManager
         bnodes.Clear();
         tnodes.Clear();
 
-        List<Texture2D> textures = new List<Texture2D>();
+        List<Texture2D> albedoTex = new List<Texture2D>();
+        List<Texture2D> emitTex = new List<Texture2D>();
 
         // add default material if submesh does not have a material
         materials.Add(new MaterialData()
@@ -145,7 +148,8 @@ public class ObjectManager
             Metallic = 0.0f,
             Smoothness = 0.0f,
             RenderMode = 0,
-            DiffuseIdx = -1
+            AlbedoIdx = -1,
+            EmitIdx = -1
         });
 
         // get info from each object
@@ -158,14 +162,24 @@ public class ObjectManager
             int matCount = meshMats.Length;
             foreach(var mat in meshMats)
             {
-                int textureIdx = -1;
+                int albedoTexIdx = -1, emiTexIdx = -1;
                 if (mat.mainTexture != null)
                 {
-                    textureIdx = textures.IndexOf(mat.mainTexture as Texture2D);
-                    if(textureIdx < 0)
+                    albedoTexIdx = albedoTex.IndexOf(mat.mainTexture as Texture2D);
+                    if(albedoTexIdx < 0)
                     {
-                        textureIdx = textures.Count;
-                        textures.Add(mat.mainTexture as Texture2D);
+                        albedoTexIdx = albedoTex.Count;
+                        albedoTex.Add(mat.mainTexture as Texture2D);
+                    }
+                }
+                var emitMap = mat.GetTexture("_EmissionMap");
+                if (emitMap != null)
+                {
+                    emiTexIdx = emitTex.IndexOf(emitMap as Texture2D);
+                    if (emiTexIdx < 0)
+                    {
+                        emiTexIdx = emitTex.Count;
+                        emitTex.Add(emitMap as Texture2D);
                     }
                 }
                 materials.Add(new MaterialData()
@@ -176,7 +190,8 @@ public class ObjectManager
                     Metallic = mat.GetFloat("_Metallic"),
                     Smoothness = mat.GetFloat("_Glossiness"), // smoothness
                     RenderMode = mat.GetFloat("_Mode"), // 0 for opaque, > 0 for transparent
-                    DiffuseIdx = textureIdx // texture index for albedo map, -1 if not exist
+                    AlbedoIdx = albedoTexIdx, // texture index for albedo map, -1 if not exist
+                    EmitIdx = emiTexIdx // texture index for emission map
                 });
             }
 
@@ -211,7 +226,10 @@ public class ObjectManager
         UpdateBuffer(ref TLASBuffer, tnodes, TLASNode.TypeSize);
 
         // create texture 2d array
-        CreateAlbedoTexture(ref textures);
+        if (AlbedoTextures != null) UnityEngine.Object.Destroy(AlbedoTextures);
+        if (EmissionTextures != null) UnityEngine.Object.Destroy(EmissionTextures);
+        AlbedoTextures = CreateTextureArray(ref albedoTex);
+        EmissionTextures = CreateTextureArray(ref emitTex);
 
         // final report
         Debug.Log(
@@ -222,7 +240,7 @@ public class ObjectManager
             "Total indices = " + indices.Count + "\n" +
             "Total normals = " + normals.Count + "\n" +
             "Total materials = " + materials.Count + "\n" +
-            "Total textures = " + textures.Count
+            "Total albedo textures = " + albedoTex.Count
         );
 
         objectUpdated = false;
@@ -264,7 +282,8 @@ public class ObjectManager
                     Metallic = mat.GetFloat("_Metallic"),
                     Smoothness = mat.GetFloat("_Glossiness"),
                     RenderMode = mat.GetFloat("_Mode"),
-                    DiffuseIdx = materials[matIdx].DiffuseIdx
+                    AlbedoIdx = materials[matIdx].AlbedoIdx,
+                    EmitIdx = materials[matIdx].EmitIdx
                 };
                 matIdx++;
             }
@@ -291,7 +310,8 @@ public class ObjectManager
         if (TLASBuffer != null) TLASBuffer.Release();
         if (BLASBuffer != null) BLASBuffer.Release();
         if (TransformBuffer != null) TransformBuffer.Release();
-        if (AlbedoTextures != null) DestroyAlbedoTexture();
+        if (AlbedoTextures != null) UnityEngine.Object.Destroy(AlbedoTextures);
+        if (EmissionTextures != null) UnityEngine.Object.Destroy(EmissionTextures);
     }
 
     private static Vector3 ColorToVector(Color color)
@@ -299,20 +319,19 @@ public class ObjectManager
         return new Vector3(color.r, color.g, color.b);
     }
 
-    private static void CreateAlbedoTexture(ref List<Texture2D> textures)
+    private static Texture2DArray CreateTextureArray(ref List<Texture2D> textures)
     {
-        if (AlbedoTextures != null) DestroyAlbedoTexture();
         int texWidth = 1, texHeight = 1;
         foreach (Texture tex in textures)
         {
             texWidth = Mathf.Max(texWidth, tex.width);
             texHeight = Mathf.Max(texHeight, tex.height);
         }
-        AlbedoTextures = new Texture2DArray(
+        var newTexture = new Texture2DArray(
             texWidth, texHeight, Mathf.Max(1, textures.Count),
             TextureFormat.ARGB32, true, false
         );
-        AlbedoTextures.SetPixels(Enumerable.Repeat(Color.white, texWidth * texHeight).ToArray(), 0, 0);
+        newTexture.SetPixels(Enumerable.Repeat(Color.white, texWidth * texHeight).ToArray(), 0, 0);
         RenderTexture rt = new RenderTexture(texWidth, texHeight, 1, RenderTextureFormat.ARGB32);
         Texture2D tmp = new Texture2D(texWidth, texHeight, TextureFormat.ARGB32, false);
         for (int i = 0; i < textures.Count; i++)
@@ -321,17 +340,12 @@ public class ObjectManager
             Graphics.Blit(textures[i], rt);
             tmp.ReadPixels(new Rect(0, 0, texWidth, texHeight), 0, 0);
             tmp.Apply();
-            AlbedoTextures.SetPixels(tmp.GetPixels(0), i, 0);
+            newTexture.SetPixels(tmp.GetPixels(0), i, 0);
         }
-        AlbedoTextures.Apply();
+        newTexture.Apply();
         RenderTexture.active = null;
         UnityEngine.Object.Destroy(rt);
         UnityEngine.Object.Destroy(tmp);
-    }
-
-    private static void DestroyAlbedoTexture()
-    {
-        if (AlbedoTextures != null) UnityEngine.Object.Destroy(AlbedoTextures);
-        AlbedoTextures = null;
+        return newTexture;
     }
 }

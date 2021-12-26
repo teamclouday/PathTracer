@@ -66,14 +66,14 @@ float3 Shade(inout Ray ray, HitInfo hit)
             ray.origin = hit.pos + sign(outside) * hit.norm * 1e-5;
             if (random < kr)
             {
-                ray.dir = normalize(SampleHemisphere3(reflect(ray.dir, hit.norm), 10000.0 * kr));
-                ray.energy *= 1.0 / kr * hit.colors.specular * saturate(dot(hit.norm, ray.dir));
+                ray.dir = normalize(SampleHemisphere3(reflect(ray.dir, hit.norm), 100000.0 * kr));
+                ray.energy *= clamp(1.0 / kr, 0.0, 1e2) * hit.colors.specular * clamp(dot(hit.norm, ray.dir), 0.8, 1.0);
             }
             else
             {
                 kr = 1.0 - kr;
-                ray.dir = normalize(SampleHemisphere3(refract(ray.dir, hit.norm, 1.0 / ior), 10000.0 * kr));
-                ray.energy *= 1.0 / kr * hit.colors.albedo * saturate(dot(-hit.norm, ray.dir));
+                ray.dir = normalize(SampleHemisphere3(refract(ray.dir, hit.norm, 1.0 / ior), 100000.0 * kr));
+                ray.energy *= clamp(1.0 / kr, 0.0, 1e2) * hit.colors.albedo * clamp(dot(-hit.norm, ray.dir), 0.8, 1.0);
             }
         }
         else

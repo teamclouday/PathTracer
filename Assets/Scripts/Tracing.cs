@@ -159,6 +159,7 @@ public class Tracing : MonoBehaviour
             if (ObjectManager.BLASBuffer != null) shader.SetBuffer(0, "_BNodes", ObjectManager.BLASBuffer);
             if (ObjectManager.TransformBuffer != null) shader.SetBuffer(0, "_Transforms", ObjectManager.TransformBuffer);
             if (ObjectManager.AlbedoTextures != null) shader.SetTexture(0, "_AlbedoTextures", ObjectManager.AlbedoTextures);
+            if (ObjectManager.EmissionTextures != null) shader.SetTexture(0, "_EmitTextures", ObjectManager.EmissionTextures);
         }
     }
 

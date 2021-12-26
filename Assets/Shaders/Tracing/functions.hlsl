@@ -61,7 +61,7 @@ Ray CreateCameraRay(Camera camera, float2 d)
 }
 
 Colors CreateColors(float3 baseColor, float3 emission, float metallic,
-    int albedoIdx = -1, float2 uv = 0.0)
+    int albedoIdx = -1, int emitIdx = -1, float2 uv = 0.0)
 {
     const float alpha = 0.04;
     if(albedoIdx >= 0)
@@ -78,6 +78,14 @@ Colors CreateColors(float3 baseColor, float3 emission, float metallic,
     Colors colors;
     colors.albedo = lerp(baseColor * (1.0 - alpha), 0.0, metallic);
     colors.specular = lerp(alpha, baseColor, metallic);
+    if (emitIdx >= 0)
+    {
+        emission = emission * pow(_EmitTextures.SampleLevel(
+                sampler_EmitTextures, float3(uv, float(emitIdx)), 0.0
+            ).xyz,
+            SRGB_CONVERT
+        );
+    }
     colors.emission = emission;
     return colors;
 }
