@@ -26,6 +26,7 @@ struct Colors
     float3 albedo;
     float3 specular;
     float3 emission;
+    float smoothness;
 };
 
 struct HitInfo
@@ -34,7 +35,6 @@ struct HitInfo
     float3 pos;
     float3 norm;
     Colors colors;
-    float smoothness;
     float mode;
 };
 #endif

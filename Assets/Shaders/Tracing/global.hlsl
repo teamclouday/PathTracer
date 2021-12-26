@@ -4,9 +4,6 @@
 // frame target
 RWTexture2D<float4> _FrameTarget;
 
-// camera transformation matrix
-//float4x4 _CameraToWorld;
-//float4x4 _CameraProjInv;
 // camera info
 float3 _CameraPos;
 float3 _CameraUp;
@@ -55,24 +52,35 @@ struct BLASNode
 };
 StructuredBuffer<BLASNode> _BNodes;
 
-struct TLASNode
+struct TLASNodeRaw
 {
     float3 boundMax;
     float3 boundMin;
     int transformIdx;
     int rootIdx;
 };
+StructuredBuffer<TLASNodeRaw> _TNodesRaw;
+
+struct TLASNode
+{
+    float3 boundMax;
+    float3 boundMin;
+    int rawNodeStartIdx;
+    int rawNodeEndIdx;
+    int childIdx;
+};
 StructuredBuffer<TLASNode> _TNodes;
 
 struct MaterialData
 {
-    float3 color;
+    float4 color;
     float3 emission;
     float metallic;
     float smoothness;
     float mode;
     int albedoIdx;
     int emitIdx;
+    int metalIdx;
 };
 StructuredBuffer<MaterialData> _Materials;
 
@@ -86,6 +94,8 @@ Texture2DArray<float4> _AlbedoTextures;
 SamplerState sampler_AlbedoTextures;
 Texture2DArray<float4> _EmitTextures;
 SamplerState sampler_EmitTextures;
+Texture2DArray<float4> _MetallicTextures;
+SamplerState sampler_MetallicTextures;
 
 // current pixel center
 //float2 PixelCenter;

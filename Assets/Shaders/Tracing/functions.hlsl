@@ -60,34 +60,66 @@ Ray CreateCameraRay(Camera camera, float2 d)
     //return CreateRay(camera.pos, direction);
 }
 
-Colors CreateColors(float3 baseColor, float3 emission, float metallic,
-    int albedoIdx = -1, int emitIdx = -1, float2 uv = 0.0)
+Colors CreateColors(float3 baseColor, float3 emission,
+    float metallic, float smoothness,
+    int3 indices = -1, float2 uv = 0.0)
 {
     const float alpha = 0.04;
-    if(albedoIdx >= 0)
+    if (indices.x >= 0)
     {
         // fetch albedo color
         // and convert from srgb space
-        float3 albedo = pow(_AlbedoTextures.SampleLevel(
-                sampler_AlbedoTextures, float3(uv, float(albedoIdx)), 0.0
-            ).xyz,
+        baseColor = baseColor * pow(abs(_AlbedoTextures.SampleLevel(
+                sampler_AlbedoTextures, float3(uv, indices.x), 0.0
+            ).xyz),
             SRGB_CONVERT
         );
-        baseColor = baseColor * albedo;    
+    }
+    if (indices.y >= 0)
+    {
+        // fetch metallic value
+        metallic = pow(abs(_MetallicTextures.SampleLevel(
+                sampler_MetallicTextures, float3(uv, indices.y), 0.0
+            ).r),
+            SRGB_CONVERT
+        );
+        smoothness = pow(abs(_MetallicTextures.SampleLevel(
+                sampler_MetallicTextures, float3(uv, indices.y), 0.0
+            ).a),
+            SRGB_CONVERT
+        );
     }
     Colors colors;
     colors.albedo = lerp(baseColor * (1.0 - alpha), 0.0, metallic);
     colors.specular = lerp(alpha, baseColor, metallic);
-    if (emitIdx >= 0)
+    if (indices.z >= 0)
     {
-        emission = emission * pow(_EmitTextures.SampleLevel(
-                sampler_EmitTextures, float3(uv, float(emitIdx)), 0.0
-            ).xyz,
+        // fetch emission value
+        emission = emission * pow(abs(_EmitTextures.SampleLevel(
+                sampler_EmitTextures, float3(uv, indices.z), 0.0
+            ).xyz),
             SRGB_CONVERT
         );
     }
     colors.emission = emission;
+    colors.smoothness = smoothness;
     return colors;
+}
+
+float GetColorAlpha(float4 color, int albedoIdx, float2 uv)
+{
+    if (albedoIdx >= 0)
+    {
+        return pow(abs(_AlbedoTextures.SampleLevel(
+                sampler_AlbedoTextures, float3(uv, albedoIdx), 0.0
+            ).a),
+            SRGB_CONVERT
+        );
+    }
+    else
+    {
+        return color.a;
+    }
 }
 
 HitInfo CreateHitInfo()
@@ -96,8 +128,7 @@ HitInfo CreateHitInfo()
     hit.dist = 1.#INF;
     hit.pos = 0.0;
     hit.norm = 0.0;
-    hit.colors = CreateColors(0.0, 0.0, 0.0);
-    hit.smoothness = 0.0;
+    hit.colors = CreateColors(0.0, 0.0, 0.0, 0.0);
     hit.mode = 0.0;
     return hit;
 }

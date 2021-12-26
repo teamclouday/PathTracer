@@ -54,8 +54,8 @@ public class AABB
     public int MaxDimension()
     {
         int result = 0; // 0 for x, 1 for y, 2 for z
-        if(pExtent.y > pExtent[result]) result = 1;
-        if(pExtent.z > pExtent[result]) result = 2;
+        if(pExtent.y > pExtent[result]) result++;
+        if(pExtent.z > pExtent[result]) result++;
         return result;
     }
 
@@ -164,14 +164,11 @@ public abstract class BVH
     /// private tree building method
     /// should be called in constructor
     /// </summary>
-    /// <param name="vertices">vertices data</param>
-    /// <param name="indices">indices data</param>
     /// <param name="faceInfo">converted face info data</param>
     /// <param name="faceInfoStart">start index</param>
     /// <param name="faceInfoEnd">end index</param>
     /// <returns></returns>
     protected abstract BVHNode Build(
-        List<Vector3> vertices, List<int> indices,
         List<FaceInfo> faceInfo,
         int faceInfoStart, int faceInfoEnd
     );
@@ -181,14 +178,14 @@ public abstract class BVH
     /// </summary>
     /// <param name="indices">indices list</param>
     /// <param name="bnodes">blas node list</param>
-    /// <param name="tnodes">tlas node list</param>
+    /// <param name="tnodesRaw">raw tlas node list</param>
     /// <param name="subindices">subindices list for current tree</param>
     /// <param name="verticesOffset">vertices offset</param>
     /// <param name="materialIdx">current assigned matrial index</param>
     /// <param name="transformIdx">current assigned transform index</param>
-    public void Flatten(
+    public void FlattenBLAS(
         ref List<int> indices, ref List<BLASNode> bnodes,
-        ref List<TLASNode> tnodes, List<int> subindices,
+        ref List<TLASRawNode> tnodesRaw, List<int> subindices,
         int verticesOffset, int materialIdx, int transformIdx
     )
     {
@@ -221,14 +218,44 @@ public abstract class BVH
             if (node.RightChild != null)
                 nodes.Enqueue(node.RightChild);
         }
-        // add TLAS node
-        tnodes.Add(new TLASNode
+        // add raw TLAS node
+        tnodesRaw.Add(new TLASRawNode
         {
             BoundMax = BVHRoot.Bounds.pMax,
             BoundMin = BVHRoot.Bounds.pMin,
             NodeRootIdx = bnodesOffset,
             TransformIdx = transformIdx
         });
+    }
+
+    public void FlattenTLAS(ref List<TLASRawNode> rawNodes, ref List<TLASNode> tnodes)
+    {
+        // reorder raw nodes
+        List<TLASRawNode> newRawNodes = new List<TLASRawNode>();
+        foreach(int rawNodeId in OrderedFaceId)
+        {
+            newRawNodes.Add(rawNodes[rawNodeId]);
+        }
+        rawNodes = newRawNodes;
+        // add TLAS nodes
+        Queue<BVHNode> nodes = new Queue<BVHNode>();
+        nodes.Enqueue(BVHRoot);
+        while (nodes.Count > 0)
+        {
+            var node = nodes.Dequeue();
+            tnodes.Add(new TLASNode
+            {
+                BoundMax = node.Bounds.pMax,
+                BoundMin = node.Bounds.pMin,
+                RawNodeStartIdx = node.FaceStart >= 0 ? node.FaceStart : -1,
+                RawNodeEndIdx = node.FaceStart >= 0 ? node.FaceEnd : -1,
+                ChildIdx = node.FaceStart >= 0 ? -1 : nodes.Count + tnodes.Count + 1
+            });
+            if (node.LeftChild != null)
+                nodes.Enqueue(node.LeftChild);
+            if (node.RightChild != null)
+                nodes.Enqueue(node.RightChild);
+        }
     }
 
     protected List<FaceInfo> CreateFaceInfo(List<Vector3> vertices, List<int> indices)
@@ -250,12 +277,27 @@ public abstract class BVH
         return info;
     }
 
-    public BVHNode BVHRoot;
+    protected List<FaceInfo> CreateFaceInfo(List<TLASRawNode> rawNodes)
+    {
+        List<FaceInfo> info = new List<FaceInfo>();
+        for (int i = 0; i < rawNodes.Count; i++)
+        {
+            info.Add(new FaceInfo
+            {
+                Bounds = new AABB(rawNodes[i].BoundMin, rawNodes[i].BoundMax),
+                FaceIdx = i
+            });
+            info[i].Center = info[i].Bounds.Center();
+        }
+        return info;
+    }
+
+    public BVHNode BVHRoot = null;
     public List<int> OrderedFaceId = new List<int>();
 
     public static BVH Construct(List<Vector3> vertices, List<int> indices, BVHType type)
     {
-        switch(type)
+        switch (type)
         {
             case BVHType.Naive:
                 return new BVHNaive(vertices, indices);
@@ -263,6 +305,19 @@ public abstract class BVH
                 return new BVHSAH(vertices, indices);
             default:
                 return new BVHNaive(vertices, indices);
+        }
+    }
+
+    public static BVH Construct(List<TLASRawNode> rawNodes, BVHType type)
+    {
+        switch (type)
+        {
+            case BVHType.Naive:
+                return new BVHNaive(rawNodes);
+            case BVHType.SAH:
+                return new BVHSAH(rawNodes);
+            default:
+                return new BVHNaive(rawNodes);
         }
     }
 }
@@ -289,11 +344,18 @@ public class BVHSAH : BVH
         // generate face info
         var faceInfo = CreateFaceInfo(vertices, indices);
         // build tree
-        BVHRoot = Build(vertices, indices, faceInfo, 0, faceInfo.Count);
+        BVHRoot = Build(faceInfo, 0, faceInfo.Count);
+    }
+
+    public BVHSAH(List<TLASRawNode> rawNodes)
+    {
+        // generate face info
+        var faceInfo = CreateFaceInfo(rawNodes);
+        // build tree
+        BVHRoot = Build(faceInfo, 0, faceInfo.Count);
     }
 
     protected override BVHNode Build(
-        List<Vector3> vertices, List<int> indices,
         List<FaceInfo> faceInfo,
         int faceInfoStart, int faceInfoEnd
     )
@@ -334,7 +396,7 @@ public class BVHSAH : BVH
             {
                 if (faceInfoCount <= 2)
                 {
-                    // if only 4 faces remain, skip SAH
+                    // if only 2 faces remain, skip SAH
                     faceInfoMid = (faceInfoStart + faceInfoEnd) / 2;
                     faceInfo.Sort(
                         faceInfoStart, faceInfoCount,
@@ -390,7 +452,7 @@ public class BVHSAH : BVH
                     //// create leaf or split primitives at selected bucket
                     float leafCost = faceInfoCount;
                     minCost = 0.5f + minCost / bounding.SurfaceArea();
-                    if (faceInfoCount > 16 || minCost < leafCost)
+                    if (faceInfoCount > 8 || minCost < leafCost)
                     {
                         var partition = faceInfo.GetRange(faceInfoStart, faceInfoCount).ToList().ToLookup(info =>
                         {
@@ -418,8 +480,8 @@ public class BVHSAH : BVH
                 // avoid middle index error
                 if (faceInfoMid == faceInfoStart) faceInfoMid = (faceInfoStart + faceInfoEnd) / 2;
                 // recursively build left and right nodes
-                var leftChild = Build(vertices, indices, faceInfo, faceInfoStart, faceInfoMid);
-                var rightChild = Build(vertices, indices, faceInfo, faceInfoMid, faceInfoEnd);
+                var leftChild = Build(faceInfo, faceInfoStart, faceInfoMid);
+                var rightChild = Build(faceInfo, faceInfoMid, faceInfoEnd);
                 return BVHNode.InitInterior(
                     dim,
                     leftChild,
@@ -441,11 +503,18 @@ public class BVHNaive : BVH
         // generate face info
         var faceInfo = CreateFaceInfo(vertices, indices);
         // build tree
-        BVHRoot = Build(vertices, indices, faceInfo, 0, faceInfo.Count);
+        BVHRoot = Build(faceInfo, 0, faceInfo.Count);
+    }
+
+    public BVHNaive(List<TLASRawNode> rawNodes)
+    {
+        // generate face info
+        var faceInfo = CreateFaceInfo(rawNodes);
+        // build tree
+        BVHRoot = Build(faceInfo, 0, faceInfo.Count);
     }
 
     protected override BVHNode Build(
-        List<Vector3> vertices, List<int> indices,
         List<FaceInfo> faceInfo,
         int faceInfoStart, int faceInfoEnd
     )
@@ -484,16 +553,14 @@ public class BVHNaive : BVH
             }
             else
             {
-                // find middle index
-                faceInfoMid = (faceInfoStart + faceInfoEnd) / 2;
                 // sort by the selected axis
                 faceInfo.Sort(
                     faceInfoStart, faceInfoCount,
                     Comparer<FaceInfo>.Create((x, y) => x.Center[dim].CompareTo(y.Center[dim]))
                 );
                 // recursively build left and right nodes
-                var leftChild = Build(vertices, indices, faceInfo, faceInfoStart, faceInfoMid);
-                var rightChild = Build(vertices, indices, faceInfo, faceInfoMid, faceInfoEnd);
+                var leftChild = Build(faceInfo, faceInfoStart, faceInfoMid);
+                var rightChild = Build(faceInfo, faceInfoMid, faceInfoEnd);
                 return BVHNode.InitInterior(
                     dim,
                     leftChild,

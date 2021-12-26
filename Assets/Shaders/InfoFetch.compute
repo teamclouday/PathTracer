@@ -13,20 +13,7 @@ HitInfo Trace(Ray ray)
 {
     HitInfo bestHit = CreateHitInfo();
     // check tlas intersection
-    uint size, stride;
-    _TNodes.GetDimensions(size, stride);
-    for (uint i = 0; i < size; i++)
-    {
-        TLASNode node = _TNodes[i];
-        Ray localRay = PrepareTreeEnterRay(ray, node.transformIdx);
-        if (IntersectBox2(localRay, node.boundMax, node.boundMin))
-        {
-            // intersect with BLAS tree
-            PrepareTreeEnterHit(localRay, bestHit, node.transformIdx);
-            IntersectBVHTree(localRay, bestHit, node.rootIdx, node.transformIdx);
-            PrepareTreeExit(ray, bestHit, node.transformIdx);
-        }
-    }
+    IntersectTlasTree(ray, bestHit);
     return bestHit;
 }
 

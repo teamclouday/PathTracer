@@ -9,16 +9,17 @@ public class Object : MonoBehaviour
         foreach(Transform sub in transform)
         {
             GameObject obj = sub.gameObject;
+            bool skipped = false;
             // a valid gameobject should have:
             // 1. mesh filter (for vertices data)
             // 2. renderer (for materials)
             // 3. topology is triangles
-            if(obj.GetComponent<MeshFilter>() != null &&
+            if (obj.GetComponent<MeshFilter>() != null &&
                 obj.GetComponent<Renderer>() != null)
             {
                 var mesh = obj.GetComponent<MeshFilter>().sharedMesh;
                 bool valid = true;
-                for(int i = 0; i < mesh.subMeshCount; i++)
+                for (int i = 0; i < mesh.subMeshCount; i++)
                 {
                     if (mesh.GetTopology(i) != MeshTopology.Triangles)
                     {
@@ -26,8 +27,11 @@ public class Object : MonoBehaviour
                         break;
                     }
                 }
-                if(valid) ObjectManager.RegisterObject(obj);
+                if (valid) ObjectManager.RegisterObject(obj);
+                else skipped = true;
             }
+            else skipped = true;
+            if (skipped) Debug.Log("Skipped object " + obj.name + " because it has invalid layout");
         }
     }
 

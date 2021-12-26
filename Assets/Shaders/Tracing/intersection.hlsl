@@ -16,8 +16,7 @@ void IntersectGround(Ray ray, inout HitInfo bestHit, float yVal = 0.0)
         bestHit.dist = t;
         bestHit.pos = ray.origin + t * ray.dir;
         bestHit.norm = float3(0.0, 1.0, 0.0);
-        bestHit.colors = CreateColors(1.0, 0.0, 0.0);
-        bestHit.smoothness = 0.0;
+        bestHit.colors = CreateColors(1.0, 0.0, 0.0, 0.0);
         bestHit.mode = 0.0;
     }
 }
@@ -90,6 +89,13 @@ bool IntersectBox2(Ray ray, float3 pMax, float3 pMin)
     return t1 >= t0;
 }
 
+bool IntersectBox3(Ray ray, HitInfo bestHit, float3 pMax, float3 pMin)
+{
+    bool intersectForward = IntersectBox2(ray, pMax, pMin);
+    bool intersectBackward = bestHit.dist < 1.#INF ? IntersectBox2(CreateRay(bestHit.pos, -ray.dir), pMax, pMin) : true;
+    return intersectForward && intersectBackward;
+}
+
 // intersect with mesh object every vertices
 void IntersectMeshObject(Ray ray, inout HitInfo bestHit, MeshData mesh)
 {
@@ -97,12 +103,6 @@ void IntersectMeshObject(Ray ray, inout HitInfo bestHit, MeshData mesh)
     int count = mesh.indicesCount;
     for (int i = offset; i < offset + count; i += 3)
     {
-        //float3 v0 = (mul(mesh.localToWorld, float4(_Vertices[_Indices[i]], 1.0))).xyz;
-        //float3 v1 = (mul(mesh.localToWorld, float4(_Vertices[_Indices[i+1]], 1.0))).xyz;
-        //float3 v2 = (mul(mesh.localToWorld, float4(_Vertices[_Indices[i+2]], 1.0))).xyz;
-        //float3 norm0 = (mul(mesh.localToWorld, float4(_Normals[_Indices[i]], 0.0))).xyz;
-        //float3 norm1 = (mul(mesh.localToWorld, float4(_Normals[_Indices[i+1]], 0.0))).xyz;
-        //float3 norm2 = (mul(mesh.localToWorld, float4(_Normals[_Indices[i+2]], 0.0))).xyz;
         float3 v0 = _Vertices[_Indices[i]];
         float3 v1 = _Vertices[_Indices[i + 1]];
         float3 v2 = _Vertices[_Indices[i + 2]];
@@ -117,23 +117,20 @@ void IntersectMeshObject(Ray ray, inout HitInfo bestHit, MeshData mesh)
         {
             if(t > 0.0 && t < bestHit.dist)
             {
+                MaterialData mat = _Materials[mesh.materialIdx];
                 float3 hitPos = ray.origin + t * ray.dir;
                 float3 norm = norm1 * u + norm2 * v + norm0 * (1.0 - u - v);
                 float2 uv = uv1 * u + uv2 * v + uv0 * (1.0 - u - v);
-                //float3 norm = cross(v2 - v0, v1 - v0);
-                //if (!CullFace(norm, ray.origin, hitPos))
-                //{
-                MaterialData mat = _Materials[mesh.materialIdx];
+                if (mat.mode == 1.0 && GetColorAlpha(mat.color, mat.albedoIdx, uv) < 1.0)
+                    continue;
                 bestHit.dist = t;
                 bestHit.pos = hitPos;
                 bestHit.norm = normalize(norm);
                 bestHit.colors = CreateColors(
-                    mat.color, mat.emission, mat.metallic,
-                    mat.albedoIdx, mat.emitIdx, uv
+                    mat.color.rgb, mat.emission, mat.metallic, mat.smoothness,
+                    int3(mat.albedoIdx, mat.metalIdx, mat.emitIdx), uv
                 );
-                bestHit.smoothness = mat.smoothness;
                 bestHit.mode = mat.mode;
-                //}
             }
         }
 
@@ -150,20 +147,11 @@ bool IntersectMeshObjectFast(Ray ray, MeshData mesh, float targetDist)
         float3 v0 = _Vertices[_Indices[i]];
         float3 v1 = _Vertices[_Indices[i + 1]];
         float3 v2 = _Vertices[_Indices[i + 2]];
-        //float3 norm0 = _Normals[_Indices[i]];
-        //float3 norm1 = _Normals[_Indices[i + 1]];
-        //float3 norm2 = _Normals[_Indices[i + 2]];
         float t, u, v;
         if (IntersectTriangle(ray, v0, v1, v2, t, u, v))
         {
             if (t > 0.0 && t < targetDist)
             {
-                //float3 hitPos = ray.origin + t * ray.dir;
-                //float3 norm = norm1 * u + norm2 * v + norm0 * (1.0 - u - v);
-                //if (!CullFace(norm, ray.origin, hitPos))
-                //{
-                //    return true;
-                //}
                 return true; // do not test for back face culling
             }
         }
@@ -173,13 +161,10 @@ bool IntersectMeshObjectFast(Ray ray, MeshData mesh, float targetDist)
 
 // test intersection with BVH tree
 // reference: https://github.com/knightcrawler25/GLSL-PathTracer/blob/master/src/shaders/common/closest_hit.glsl
-void IntersectBVHTree(Ray ray, inout HitInfo bestHit, int startIdx, int transformIdx)
+void IntersectBlasTree(Ray ray, inout HitInfo bestHit, int startIdx, int transformIdx)
 {
     int stack[BVHTREE_RECURSE_SIZE];
     int stackPtr = 0;
-    //uint dimC, dimS;
-    //_Nodes.GetDimensions(dimC, dimS);
-    //int count = (int)dimC;
     int faceIdx;
     stack[stackPtr] = startIdx;
     float4x4 localToWorld = _Transforms[transformIdx * 2];
@@ -211,18 +196,19 @@ void IntersectBVHTree(Ray ray, inout HitInfo bestHit, int startIdx, int transfor
                     {
                         if (t > 0.0 && t < bestHit.dist)
                         {
+                            MaterialData mat = _Materials[node.materialIdx];
                             float3 hitPos = ray.origin + t * ray.dir;
                             float3 norm = norm1 * u + norm2 * v + norm0 * (1.0 - u - v);
                             float2 uv = uv1 * u + uv2 * v + uv0 * (1.0 - u - v);
-                            MaterialData mat = _Materials[node.materialIdx];
+                            if (mat.mode == 1.0 && GetColorAlpha(mat.color, mat.albedoIdx, uv) < 1.0)
+                                continue;
                             bestHit.dist = t;
                             bestHit.pos = hitPos;
                             bestHit.norm = normalize(mul(localToWorld, float4(norm, 0.0)).xyz);
                             bestHit.colors = CreateColors(
-                                mat.color, mat.emission, mat.metallic,
-                                mat.albedoIdx, mat.emitIdx, uv
+                                mat.color.rgb, mat.emission, mat.metallic, mat.smoothness,
+                                int3(mat.albedoIdx, mat.metalIdx, mat.emitIdx), uv
                             );
-                            bestHit.smoothness = mat.smoothness;
                             bestHit.mode = mat.mode;
                         }
                     }
@@ -238,13 +224,10 @@ void IntersectBVHTree(Ray ray, inout HitInfo bestHit, int startIdx, int transfor
 }
 
 // quickly determine if intersect with something
-bool IntersectBVHTreeFast(Ray ray, int startIdx, float targetDist)
+bool IntersectBlasTreeFast(Ray ray, int startIdx, float targetDist)
 {
     int stack[BVHTREE_RECURSE_SIZE];
     int stackPtr = 0;
-    //uint dimC, dimS;
-    //_Nodes.GetDimensions(dimC, dimS);
-    //int count = (int)dimC;
     int faceIdx;
     stack[stackPtr] = startIdx;
     while (stackPtr >= 0 && stackPtr < BVHTREE_RECURSE_SIZE)
@@ -272,6 +255,94 @@ bool IntersectBVHTreeFast(Ray ray, int startIdx, float targetDist)
                             return true;
                         }
                     }
+                }
+            }
+            else
+            {
+                stack[++stackPtr] = node.childIdx;
+                stack[++stackPtr] = node.childIdx + 1;
+            }
+        }
+    }
+    return false;
+}
+
+void IntersectTlasTree(Ray ray, inout HitInfo bestHit)
+{
+    int stack[BVHTREE_RECURSE_SIZE];
+    int stackPtr = 0;
+    int rawNodeIdx;
+    stack[stackPtr] = 0;
+    while (stackPtr >= 0 && stackPtr < BVHTREE_RECURSE_SIZE)
+    {
+        int idx = stack[stackPtr--];
+        TLASNode node = _TNodes[idx];
+        bool hit = IntersectBox3(ray, bestHit, node.boundMax, node.boundMin);
+        bool leaf = node.rawNodeStartIdx >= 0;
+        if(hit)
+        {
+            if(leaf)
+            {
+                for (rawNodeIdx = node.rawNodeStartIdx; rawNodeIdx < node.rawNodeEndIdx; rawNodeIdx++)
+                {
+                    TLASNodeRaw rawNode = _TNodesRaw[rawNodeIdx];
+                    Ray localRay = PrepareTreeEnterRay(ray, rawNode.transformIdx);
+                    PrepareTreeEnterHit(localRay, bestHit, rawNode.transformIdx);
+                    IntersectBlasTree(localRay, bestHit, rawNode.rootIdx, rawNode.transformIdx);
+                    PrepareTreeExit(ray, bestHit, rawNode.transformIdx);
+                }
+            }
+            else
+            {
+                stack[++stackPtr] = node.childIdx;
+                stack[++stackPtr] = node.childIdx + 1;
+            }
+        }
+    }
+}
+
+void IntersectTlas(Ray ray, inout HitInfo bestHit)
+{
+    uint size, stride;
+    _TNodesRaw.GetDimensions(size, stride);
+    for (uint i = 0; i < size; i++)
+    {
+        TLASNodeRaw node = _TNodesRaw[i];
+        if (IntersectBox3(ray, bestHit, node.boundMax, node.boundMin))
+        {
+            // intersect with BLAS tree
+            Ray localRay = PrepareTreeEnterRay(ray, node.transformIdx);
+            PrepareTreeEnterHit(localRay, bestHit, node.transformIdx);
+            IntersectBlasTree(localRay, bestHit, node.rootIdx, node.transformIdx);
+            PrepareTreeExit(ray, bestHit, node.transformIdx);
+        }
+    }
+}
+
+bool IntersectTlasTreeFast(Ray ray, HitInfo bestHit, float targetDist)
+{
+    int stack[BVHTREE_RECURSE_SIZE];
+    int stackPtr = 0;
+    int rawNodeIdx;
+    stack[stackPtr] = 0;
+    while (stackPtr >= 0 && stackPtr < BVHTREE_RECURSE_SIZE)
+    {
+        int idx = stack[stackPtr--];
+        TLASNode node = _TNodes[idx];
+        bool hit = IntersectBox2(ray, node.boundMax, node.boundMin);
+        bool leaf = node.rawNodeStartIdx >= 0;
+        if (hit)
+        {
+            if (leaf)
+            {
+                for (rawNodeIdx = node.rawNodeStartIdx; rawNodeIdx < node.rawNodeEndIdx; rawNodeIdx++)
+                {
+                    TLASNodeRaw rawNode = _TNodesRaw[rawNodeIdx];
+                    Ray localRay = PrepareTreeEnterRay(ray, rawNode.transformIdx);
+                    PrepareTreeEnterHit(localRay, bestHit, rawNode.transformIdx);
+                    if (IntersectBlasTreeFast(localRay, rawNode.rootIdx, targetDist))
+                        return true;
+                    PrepareTreeExit(ray, bestHit, rawNode.transformIdx);
                 }
             }
             else

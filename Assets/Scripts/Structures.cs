@@ -20,15 +20,16 @@ public struct MeshData
 /// </summary>
 public struct MaterialData
 {
-    public Vector3 Color;
+    public Vector4 Color;
     public Vector3 Emission;
     public float Metallic;
     public float Smoothness;
     public float RenderMode;
     public int AlbedoIdx;
     public int EmitIdx;
+    public int MetallicIdx;
 
-    public static int TypeSize = sizeof(float)*3*2+sizeof(float)*3+sizeof(int)*2;
+    public static int TypeSize = sizeof(float)*10+sizeof(int)*3;
 }
 
 /// <summary>
@@ -46,7 +47,10 @@ public struct BLASNode
     public static int TypeSize = sizeof(float)*3*2+sizeof(int)*4;
 }
 
-public struct TLASNode
+/// <summary>
+/// Raw TLAS node info
+/// </summary>
+public struct TLASRawNode
 {
     public Vector3 BoundMax;
     public Vector3 BoundMin;
@@ -54,6 +58,20 @@ public struct TLASNode
     public int NodeRootIdx;
 
     public static int TypeSize = sizeof(float)*3*2+sizeof(int)*2;
+}
+
+/// <summary>
+/// TLAS node built with bvh
+/// </summary>
+public struct TLASNode
+{
+    public Vector3 BoundMax;
+    public Vector3 BoundMin;
+    public int RawNodeStartIdx;
+    public int RawNodeEndIdx;
+    public int ChildIdx;
+
+    public static int TypeSize = sizeof(float)*3*2+sizeof(int)*3;
 }
 
 /// <summary>
@@ -70,6 +88,7 @@ public class ObjectManager
     // TLAS, BLAS
     private static List<BLASNode> bnodes = new List<BLASNode>();
     private static List<TLASNode> tnodes = new List<TLASNode>();
+    private static List<TLASRawNode> tnodesRaw = new List<TLASRawNode>();
     // size of objects * 2, local to world & world to local transform
     private static List<Matrix4x4> transforms = new List<Matrix4x4>();
     public static BVHType BVHConstructorType = BVHType.SAH;
@@ -83,9 +102,11 @@ public class ObjectManager
     public static ComputeBuffer MaterialBuffer;
     public static ComputeBuffer BLASBuffer;
     public static ComputeBuffer TLASBuffer;
+    public static ComputeBuffer TLASRawBuffer;
     public static ComputeBuffer TransformBuffer;
     public static Texture2DArray AlbedoTextures = null;
     public static Texture2DArray EmissionTextures = null;
+    public static Texture2DArray MetallicTextures = null;
 
     private static bool objectUpdated = false;
     private static bool objectTransformUpdated = false;
@@ -135,10 +156,11 @@ public class ObjectManager
         normals.Clear();
         materials.Clear();
         bnodes.Clear();
-        tnodes.Clear();
+        tnodesRaw.Clear();
 
         List<Texture2D> albedoTex = new List<Texture2D>();
         List<Texture2D> emitTex = new List<Texture2D>();
+        List<Texture2D> metalTex = new List<Texture2D>();
 
         // add default material if submesh does not have a material
         materials.Add(new MaterialData()
@@ -149,7 +171,8 @@ public class ObjectManager
             Smoothness = 0.0f,
             RenderMode = 0,
             AlbedoIdx = -1,
-            EmitIdx = -1
+            EmitIdx = -1,
+            MetallicIdx = -1
         });
 
         // get info from each object
@@ -162,7 +185,7 @@ public class ObjectManager
             int matCount = meshMats.Length;
             foreach(var mat in meshMats)
             {
-                int albedoTexIdx = -1, emiTexIdx = -1;
+                int albedoTexIdx = -1, emiTexIdx = -1, metalTexIdx = -1;
                 if (mat.mainTexture != null)
                 {
                     albedoTexIdx = albedoTex.IndexOf(mat.mainTexture as Texture2D);
@@ -182,16 +205,27 @@ public class ObjectManager
                         emitTex.Add(emitMap as Texture2D);
                     }
                 }
+                var metalMap = mat.GetTexture("_MetallicGlossMap");
+                if (metalMap != null)
+                {
+                    metalTexIdx = metalTex.IndexOf(metalMap as Texture2D);
+                    if (metalTexIdx < 0)
+                    {
+                        metalTexIdx = metalTex.Count;
+                        metalTex.Add(metalMap as Texture2D);
+                    }
+                }
                 materials.Add(new MaterialData()
                 {
-                    Color = ColorToVector(mat.color),
-                    Emission = mat.IsKeywordEnabled("_EMISSION") ? ColorToVector(mat.GetColor("_EmissionColor")) : Vector3.zero,
+                    Color = ColorToVector4(mat.color),
+                    Emission = mat.IsKeywordEnabled("_EMISSION") ? ColorToVector3(mat.GetColor("_EmissionColor")) : Vector3.zero,
                     // assuming standard unity shader
                     Metallic = mat.GetFloat("_Metallic"),
                     Smoothness = mat.GetFloat("_Glossiness"), // smoothness
                     RenderMode = mat.GetFloat("_Mode"), // 0 for opaque, > 0 for transparent
                     AlbedoIdx = albedoTexIdx, // texture index for albedo map, -1 if not exist
-                    EmitIdx = emiTexIdx // texture index for emission map
+                    EmitIdx = emiTexIdx, // texture index for emission map
+                    MetallicIdx = metalTexIdx // texture index for metallic map
                 });
             }
 
@@ -205,17 +239,20 @@ public class ObjectManager
             {
                 var submeshIndices = mesh.GetIndices(i).ToList();
                 BVH blasTree = BVH.Construct(meshVertices, submeshIndices, BVHConstructorType);
-                blasTree.Flatten(ref indices, ref bnodes, ref tnodes, submeshIndices, vertexStart, i < matCount ? i + matStart : 0, idx);
+                blasTree.FlattenBLAS(ref indices, ref bnodes, ref tnodesRaw, submeshIndices, vertexStart, i < matCount ? i + matStart : 0, idx);
             }
 
             vertices.AddRange(meshVertices);
             uvs.AddRange(meshUVs);
             normals.AddRange(meshNormals);
             if (meshNormals.Length != meshVertices.Count)
-                Debug.LogError("Object " + obj.name + " has different normals and vertices size");
+                Debug.LogWarning("Object " + obj.name + " has different normals and vertices size");
             if (meshUVs.Length != meshVertices.Count)
-                Debug.LogError("Object " + obj.name + " has different uvs and vertices size");
+                Debug.LogWarning("Object " + obj.name + " has different uvs and vertices size");
         }
+
+        // build TLAS bvh
+        ReloadTLAS();
 
         UpdateBuffer(ref IndexBuffer, indices, sizeof(int));
         UpdateBuffer(ref VertexBuffer, vertices, sizeof(float) * 3);
@@ -223,24 +260,28 @@ public class ObjectManager
         UpdateBuffer(ref NormalBuffer, normals, sizeof(float) * 3);
         UpdateBuffer(ref MaterialBuffer, materials, MaterialData.TypeSize);
         UpdateBuffer(ref BLASBuffer, bnodes, BLASNode.TypeSize);
-        UpdateBuffer(ref TLASBuffer, tnodes, TLASNode.TypeSize);
 
         // create texture 2d array
         if (AlbedoTextures != null) UnityEngine.Object.Destroy(AlbedoTextures);
         if (EmissionTextures != null) UnityEngine.Object.Destroy(EmissionTextures);
+        if (MetallicTextures != null) UnityEngine.Object.Destroy(MetallicTextures);
         AlbedoTextures = CreateTextureArray(ref albedoTex);
         EmissionTextures = CreateTextureArray(ref emitTex);
+        MetallicTextures = CreateTextureArray(ref metalTex);
 
         // final report
         Debug.Log(
             "BVH built\n" +
             "TLAS nodes = " + tnodes.Count + "\n" +
+            "TLAS raw nodes = " + tnodesRaw.Count + "\n" +
             "BLAS nodes = " + bnodes.Count + "\n" +
             "Total vertices = " + vertices.Count + "\n" +
             "Total indices = " + indices.Count + "\n" +
             "Total normals = " + normals.Count + "\n" +
             "Total materials = " + materials.Count + "\n" +
-            "Total albedo textures = " + albedoTex.Count
+            "Total albedo textures = " + albedoTex.Count + "\n" +
+            "Total emissive textures = " + emitTex.Count + "\n" +
+            "Total metallic textures = " + metalTex.Count
         );
 
         objectUpdated = false;
@@ -277,19 +318,43 @@ public class ObjectManager
             {
                 materials[matIdx] = new MaterialData()
                 {
-                    Color = ColorToVector(mat.color),
-                    Emission = mat.IsKeywordEnabled("_EMISSION") ? ColorToVector(mat.GetColor("_EmissionColor")) : Vector3.zero,
+                    Color = ColorToVector4(mat.color),
+                    Emission = mat.IsKeywordEnabled("_EMISSION") ? ColorToVector3(mat.GetColor("_EmissionColor")) : Vector3.zero,
                     Metallic = mat.GetFloat("_Metallic"),
                     Smoothness = mat.GetFloat("_Glossiness"),
                     RenderMode = mat.GetFloat("_Mode"),
                     AlbedoIdx = materials[matIdx].AlbedoIdx,
-                    EmitIdx = materials[matIdx].EmitIdx
+                    EmitIdx = materials[matIdx].EmitIdx,
+                    MetallicIdx = materials[matIdx].MetallicIdx,
                 };
                 matIdx++;
             }
         }
         UpdateBuffer(ref MaterialBuffer, materials, MaterialData.TypeSize);
         Debug.Log("Materials reloaded");
+    }
+
+    public static void ReloadTLAS()
+    {
+        if (tnodesRaw.Count <= 0) return;
+        if (transforms.Count <= 0) LoadTransforms();
+        tnodes.Clear();
+        // multiply transforms to get world space scale
+        for(int i = 0; i < tnodesRaw.Count; i++)
+        {
+            var node = tnodesRaw[i];
+            tnodesRaw[i] = new TLASRawNode()
+            {
+                BoundMax = transforms[node.TransformIdx * 2].MultiplyPoint3x4(node.BoundMax),
+                BoundMin = transforms[node.TransformIdx * 2].MultiplyPoint3x4(node.BoundMin),
+                TransformIdx = node.TransformIdx,
+                NodeRootIdx = node.NodeRootIdx
+            };
+        }
+        BVH tlasTree = BVH.Construct(tnodesRaw, BVHConstructorType);
+        tlasTree.FlattenTLAS(ref tnodesRaw, ref tnodes);
+        UpdateBuffer(ref TLASBuffer, tnodes, TLASNode.TypeSize);
+        UpdateBuffer(ref TLASRawBuffer, tnodesRaw, TLASRawNode.TypeSize);
     }
 
     private static void UpdateBuffer<T>(ref ComputeBuffer buffer, List<T> data, int stride) where T : struct
@@ -308,13 +373,20 @@ public class ObjectManager
         if (UVBuffer != null) UVBuffer.Release();
         if (MaterialBuffer != null) MaterialBuffer.Release();
         if (TLASBuffer != null) TLASBuffer.Release();
+        if (TLASRawBuffer != null) TLASRawBuffer.Release();
         if (BLASBuffer != null) BLASBuffer.Release();
         if (TransformBuffer != null) TransformBuffer.Release();
         if (AlbedoTextures != null) UnityEngine.Object.Destroy(AlbedoTextures);
         if (EmissionTextures != null) UnityEngine.Object.Destroy(EmissionTextures);
+        if (MetallicTextures != null) UnityEngine.Object.Destroy(MetallicTextures);
     }
 
-    private static Vector3 ColorToVector(Color color)
+    private static Vector4 ColorToVector4(Color color)
+    {
+        return new Vector4(color.r, color.g, color.b, color.a);
+    }
+
+    private static Vector3 ColorToVector3(Color color)
     {
         return new Vector3(color.r, color.g, color.b);
     }

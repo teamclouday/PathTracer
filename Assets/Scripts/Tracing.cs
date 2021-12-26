@@ -156,10 +156,12 @@ public class Tracing : MonoBehaviour
             if (ObjectManager.UVBuffer != null) shader.SetBuffer(0, "_UVs", ObjectManager.UVBuffer);
             if (ObjectManager.MaterialBuffer != null) shader.SetBuffer(0, "_Materials", ObjectManager.MaterialBuffer);
             if (ObjectManager.TLASBuffer != null) shader.SetBuffer(0, "_TNodes", ObjectManager.TLASBuffer);
+            if (ObjectManager.TLASRawBuffer != null) shader.SetBuffer(0, "_TNodesRaw", ObjectManager.TLASRawBuffer);
             if (ObjectManager.BLASBuffer != null) shader.SetBuffer(0, "_BNodes", ObjectManager.BLASBuffer);
             if (ObjectManager.TransformBuffer != null) shader.SetBuffer(0, "_Transforms", ObjectManager.TransformBuffer);
             if (ObjectManager.AlbedoTextures != null) shader.SetTexture(0, "_AlbedoTextures", ObjectManager.AlbedoTextures);
             if (ObjectManager.EmissionTextures != null) shader.SetTexture(0, "_EmitTextures", ObjectManager.EmissionTextures);
+            if (ObjectManager.MetallicTextures != null) shader.SetTexture(0, "_MetallicTextures", ObjectManager.MetallicTextures);
         }
     }
 
