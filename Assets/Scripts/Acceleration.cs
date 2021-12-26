@@ -54,8 +54,8 @@ public class AABB
     public int MaxDimension()
     {
         int result = 0; // 0 for x, 1 for y, 2 for z
-        if(pExtent.y > pExtent[result]) result++;
-        if(pExtent.z > pExtent[result]) result++;
+        if(pExtent.y > pExtent[result]) result = 1;
+        if(pExtent.z > pExtent[result]) result = 2;
         return result;
     }
 
@@ -397,7 +397,6 @@ public class BVHSAH : BVH
                 if (faceInfoCount <= 2)
                 {
                     // if only 2 faces remain, skip SAH
-                    faceInfoMid = (faceInfoStart + faceInfoEnd) / 2;
                     faceInfo.Sort(
                         faceInfoStart, faceInfoCount,
                         Comparer<FaceInfo>.Create((x, y) => x.Center[dim].CompareTo(y.Center[dim]))
@@ -452,7 +451,7 @@ public class BVHSAH : BVH
                     //// create leaf or split primitives at selected bucket
                     float leafCost = faceInfoCount;
                     minCost = 0.5f + minCost / bounding.SurfaceArea();
-                    if (faceInfoCount > 8 || minCost < leafCost)
+                    if (faceInfoCount > 16 || minCost < leafCost)
                     {
                         var partition = faceInfo.GetRange(faceInfoStart, faceInfoCount).ToList().ToLookup(info =>
                         {
