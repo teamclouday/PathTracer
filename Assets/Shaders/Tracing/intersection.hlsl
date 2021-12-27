@@ -106,9 +106,6 @@ void IntersectMeshObject(Ray ray, inout HitInfo bestHit, MeshData mesh)
         float3 v0 = _Vertices[_Indices[i]];
         float3 v1 = _Vertices[_Indices[i + 1]];
         float3 v2 = _Vertices[_Indices[i + 2]];
-        float3 norm0 = _Normals[_Indices[i]];
-        float3 norm1 = _Normals[_Indices[i + 1]];
-        float3 norm2 = _Normals[_Indices[i + 2]];
         float2 uv0 = _UVs[_Indices[i]];
         float2 uv1 = _UVs[_Indices[i + 1]];
         float2 uv2 = _UVs[_Indices[i + 2]];
@@ -119,8 +116,8 @@ void IntersectMeshObject(Ray ray, inout HitInfo bestHit, MeshData mesh)
             {
                 MaterialData mat = _Materials[mesh.materialIdx];
                 float3 hitPos = ray.origin + t * ray.dir;
-                float3 norm = norm1 * u + norm2 * v + norm0 * (1.0 - u - v);
                 float2 uv = uv1 * u + uv2 * v + uv0 * (1.0 - u - v);
+                float3 norm = GetNormal(i, float2(u, v), mat.normIdx, uv);
                 if (mat.mode == 1.0 && GetColorAlpha(mat.color, mat.albedoIdx, uv) < 1.0)
                     continue;
                 bestHit.dist = t;
@@ -185,9 +182,6 @@ void IntersectBlasTree(Ray ray, inout HitInfo bestHit, int startIdx, int transfo
                     float3 v0 = _Vertices[_Indices[i]];
                     float3 v1 = _Vertices[_Indices[i + 1]];
                     float3 v2 = _Vertices[_Indices[i + 2]];
-                    float3 norm0 = _Normals[_Indices[i]];
-                    float3 norm1 = _Normals[_Indices[i + 1]];
-                    float3 norm2 = _Normals[_Indices[i + 2]];
                     float2 uv0 = _UVs[_Indices[i]];
                     float2 uv1 = _UVs[_Indices[i + 1]];
                     float2 uv2 = _UVs[_Indices[i + 2]];
@@ -198,8 +192,8 @@ void IntersectBlasTree(Ray ray, inout HitInfo bestHit, int startIdx, int transfo
                         {
                             MaterialData mat = _Materials[node.materialIdx];
                             float3 hitPos = ray.origin + t * ray.dir;
-                            float3 norm = norm1 * u + norm2 * v + norm0 * (1.0 - u - v);
                             float2 uv = uv1 * u + uv2 * v + uv0 * (1.0 - u - v);
+                            float3 norm = GetNormal(i, float2(u, v), mat.normIdx, uv);
                             if (mat.mode == 1.0 && GetColorAlpha(mat.color, mat.albedoIdx, uv) < 1.0)
                                 continue;
                             bestHit.dist = t;

@@ -82,12 +82,14 @@ struct MaterialData
     int albedoIdx;
     int emitIdx;
     int metalIdx;
+    int normIdx;
 };
 StructuredBuffer<MaterialData> _Materials;
 
 StructuredBuffer<float3> _Vertices;
 StructuredBuffer<int> _Indices;
 StructuredBuffer<float3> _Normals;
+StructuredBuffer<float4> _Tangents;
 StructuredBuffer<float2> _UVs;
 StructuredBuffer<float4x4> _Transforms;
 
@@ -97,6 +99,8 @@ Texture2DArray<float4> _EmitTextures;
 SamplerState sampler_EmitTextures;
 Texture2DArray<float4> _MetallicTextures;
 SamplerState sampler_MetallicTextures;
+Texture2DArray<float4> _NormalTextures;
+SamplerState sampler_NormalTextures;
 
 // current pixel center
 //float2 PixelCenter;

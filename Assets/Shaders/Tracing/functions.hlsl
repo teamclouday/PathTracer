@@ -78,16 +78,10 @@ Colors CreateColors(float3 baseColor, float3 emission,
     if (indices.y >= 0)
     {
         // fetch metallic value
-        metallic = pow(abs(_MetallicTextures.SampleLevel(
-                sampler_MetallicTextures, float3(uv, indices.y), 0.0
-            ).r),
-            SRGB_CONVERT
-        );
-        smoothness = pow(abs(_MetallicTextures.SampleLevel(
-                sampler_MetallicTextures, float3(uv, indices.y), 0.0
-            ).a),
-            SRGB_CONVERT
-        );
+        float4 metallicRoughness = _MetallicTextures.SampleLevel(sampler_MetallicTextures, float3(uv, indices.y), 0.0);
+        metallic = pow(abs(metallicRoughness.r), SRGB_CONVERT);
+        smoothness = pow(abs(metallicRoughness.a), SRGB_CONVERT);
+
     }
     Colors colors;
     colors.albedo = lerp(baseColor * (1.0 - alpha), 0.0, metallic);
@@ -119,6 +113,34 @@ float GetColorAlpha(float4 color, int albedoIdx, float2 uv)
     else
     {
         return color.a;
+    }
+}
+
+float3 GetNormal(int idx, float2 data, int normIdx, float2 uv)
+{
+    float3 norm0 = _Normals[_Indices[idx]];
+    float3 norm1 = _Normals[_Indices[idx + 1]];
+    float3 norm2 = _Normals[_Indices[idx + 2]];
+    float3 norm = norm1 * data.x + norm2 * data.y + norm0 * (1.0 - data.x - data.y);
+    float4 tangent0 = _Tangents[_Indices[idx]];
+    float4 tangent1 = _Tangents[_Indices[idx + 1]];
+    float4 tangent2 = _Tangents[_Indices[idx + 2]];
+    float4 tangent = tangent1 * data.x + tangent2 * data.y + tangent0 * (1.0 - data.x - data.y);
+    //tangent.w = tangent0.w;
+    if (normIdx >= 0)
+    {
+        float3 binorm = normalize(cross(norm, tangent.xyz)) * tangent.w;
+        float3x3 TBN = float3x3(
+            norm,
+            binorm,
+            tangent.xyz
+        );
+        float3 normTS = _NormalTextures.SampleLevel(sampler_NormalTextures, float3(uv, normIdx), 0.0).xyz * 2.0 - 1.0;
+        return mul(normTS, TBN);
+    }
+    else
+    {
+        return norm;
     }
 }
 

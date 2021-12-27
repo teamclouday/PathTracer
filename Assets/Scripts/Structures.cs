@@ -28,8 +28,9 @@ public struct MaterialData
     public int AlbedoIdx;
     public int EmitIdx;
     public int MetallicIdx;
+    public int NormalIdx;
 
-    public static int TypeSize = sizeof(float)*10+sizeof(int)*3;
+    public static int TypeSize = sizeof(float)*10+sizeof(int)*4;
 }
 
 /// <summary>
@@ -74,6 +75,24 @@ public struct TLASNode
     public static int TypeSize = sizeof(float)*3*2+sizeof(int)*3;
 }
 
+public static class TextureManager
+{
+    public static int GetMaxDimension(int count, int dim)
+    {
+        if (dim >= 2048)
+        {
+            if (count <= 16) return 2048;
+            else return 1024;
+        }
+        else if (dim >= 1024)
+        {
+            if (count <= 48) return 1024;
+            else return 512;
+        }
+        else return dim;
+    }
+}
+
 /// <summary>
 /// Global Object Manager
 /// </summary>
@@ -83,6 +102,7 @@ public class ObjectManager
     private static List<Vector3> vertices = new List<Vector3>();
     private static List<Vector2> uvs = new List<Vector2>();
     private static List<Vector3> normals = new List<Vector3>();
+    private static List<Vector4> tangents = new List<Vector4>();
     private static List<MaterialData> materials = new List<MaterialData>();
 
     // TLAS, BLAS
@@ -99,6 +119,7 @@ public class ObjectManager
     public static ComputeBuffer UVBuffer;
     public static ComputeBuffer IndexBuffer;
     public static ComputeBuffer NormalBuffer;
+    public static ComputeBuffer TangentBuffer;
     public static ComputeBuffer MaterialBuffer;
     public static ComputeBuffer BLASBuffer;
     public static ComputeBuffer TLASBuffer;
@@ -107,6 +128,7 @@ public class ObjectManager
     public static Texture2DArray AlbedoTextures = null;
     public static Texture2DArray EmissionTextures = null;
     public static Texture2DArray MetallicTextures = null;
+    public static Texture2DArray NormalTextures = null;
 
     private static bool objectUpdated = false;
     private static bool objectTransformUpdated = false;
@@ -154,6 +176,7 @@ public class ObjectManager
         uvs.Clear();
         indices.Clear();
         normals.Clear();
+        tangents.Clear();
         materials.Clear();
         bnodes.Clear();
         tnodesRaw.Clear();
@@ -161,6 +184,7 @@ public class ObjectManager
         List<Texture2D> albedoTex = new List<Texture2D>();
         List<Texture2D> emitTex = new List<Texture2D>();
         List<Texture2D> metalTex = new List<Texture2D>();
+        List<Texture2D> normTex = new List<Texture2D>();
 
         // add default material if submesh does not have a material
         materials.Add(new MaterialData()
@@ -172,7 +196,8 @@ public class ObjectManager
             RenderMode = 0,
             AlbedoIdx = -1,
             EmitIdx = -1,
-            MetallicIdx = -1
+            MetallicIdx = -1,
+            NormalIdx = -1
         });
 
         // get info from each object
@@ -185,7 +210,7 @@ public class ObjectManager
             int matCount = meshMats.Length;
             foreach(var mat in meshMats)
             {
-                int albedoTexIdx = -1, emiTexIdx = -1, metalTexIdx = -1;
+                int albedoTexIdx = -1, emiTexIdx = -1, metalTexIdx = -1, normTexIdx = -1;
                 if (mat.mainTexture != null)
                 {
                     albedoTexIdx = albedoTex.IndexOf(mat.mainTexture as Texture2D);
@@ -215,6 +240,16 @@ public class ObjectManager
                         metalTex.Add(metalMap as Texture2D);
                     }
                 }
+                var normMap = mat.GetTexture("_BumpMap");
+                if (normMap != null)
+                {
+                    normTexIdx = normTex.IndexOf(normMap as Texture2D);
+                    if (normTexIdx < 0)
+                    {
+                        normTexIdx = normTex.Count;
+                        normTex.Add(normMap as Texture2D);
+                    }
+                }
                 materials.Add(new MaterialData()
                 {
                     Color = ColorToVector4(mat.color),
@@ -225,7 +260,8 @@ public class ObjectManager
                     RenderMode = mat.GetFloat("_Mode"), // 0 for opaque, > 0 for transparent
                     AlbedoIdx = albedoTexIdx, // texture index for albedo map, -1 if not exist
                     EmitIdx = emiTexIdx, // texture index for emission map
-                    MetallicIdx = metalTexIdx // texture index for metallic map
+                    MetallicIdx = metalTexIdx, // texture index for metallic map
+                    NormalIdx = normTexIdx, // texture index for normal map
                 });
             }
 
@@ -233,6 +269,7 @@ public class ObjectManager
             var meshVertices = mesh.vertices.ToList();
             var meshNormals = mesh.normals;
             var meshUVs = mesh.uv;
+            var meshTangents = mesh.tangents;
             int vertexStart = vertices.Count;
             
             for(int i = 0; i < mesh.subMeshCount; i++)
@@ -245,8 +282,11 @@ public class ObjectManager
             vertices.AddRange(meshVertices);
             uvs.AddRange(meshUVs);
             normals.AddRange(meshNormals);
+            tangents.AddRange(meshTangents);
             if (meshNormals.Length != meshVertices.Count)
                 Debug.LogWarning("Object " + obj.name + " has different normals and vertices size");
+            if (meshTangents.Length != meshVertices.Count)
+                Debug.LogWarning("Object " + obj.name + " has different tangents and vertices size");
             if (meshUVs.Length != meshVertices.Count)
                 Debug.LogWarning("Object " + obj.name + " has different uvs and vertices size");
         }
@@ -258,6 +298,7 @@ public class ObjectManager
         UpdateBuffer(ref VertexBuffer, vertices, sizeof(float) * 3);
         UpdateBuffer(ref UVBuffer, uvs, sizeof(float) * 2);
         UpdateBuffer(ref NormalBuffer, normals, sizeof(float) * 3);
+        UpdateBuffer(ref TangentBuffer, tangents, sizeof(float) * 4);
         UpdateBuffer(ref MaterialBuffer, materials, MaterialData.TypeSize);
         UpdateBuffer(ref BLASBuffer, bnodes, BLASNode.TypeSize);
 
@@ -265,9 +306,11 @@ public class ObjectManager
         if (AlbedoTextures != null) UnityEngine.Object.Destroy(AlbedoTextures);
         if (EmissionTextures != null) UnityEngine.Object.Destroy(EmissionTextures);
         if (MetallicTextures != null) UnityEngine.Object.Destroy(MetallicTextures);
+        if (NormalTextures != null) UnityEngine.Object.Destroy(NormalTextures);
         AlbedoTextures = CreateTextureArray(ref albedoTex);
         EmissionTextures = CreateTextureArray(ref emitTex);
         MetallicTextures = CreateTextureArray(ref metalTex);
+        NormalTextures = CreateTextureArray(ref normTex);
 
         // final report
         Debug.Log(
@@ -278,10 +321,12 @@ public class ObjectManager
             "Total vertices = " + vertices.Count + "\n" +
             "Total indices = " + indices.Count + "\n" +
             "Total normals = " + normals.Count + "\n" +
+            "Total tangents = " + tangents.Count + "\n" +
             "Total materials = " + materials.Count + "\n" +
             "Total albedo textures = " + albedoTex.Count + "\n" +
             "Total emissive textures = " + emitTex.Count + "\n" +
-            "Total metallic textures = " + metalTex.Count
+            "Total metallic textures = " + metalTex.Count + "\n" +
+            "Total normal textures = " + normTex.Count
         );
 
         objectUpdated = false;
@@ -326,6 +371,7 @@ public class ObjectManager
                     AlbedoIdx = materials[matIdx].AlbedoIdx,
                     EmitIdx = materials[matIdx].EmitIdx,
                     MetallicIdx = materials[matIdx].MetallicIdx,
+                    NormalIdx = materials[matIdx].NormalIdx
                 };
                 matIdx++;
             }
@@ -370,6 +416,7 @@ public class ObjectManager
         if (IndexBuffer != null) IndexBuffer.Release();
         if (VertexBuffer != null) VertexBuffer.Release();
         if (NormalBuffer != null) NormalBuffer.Release();
+        if (TangentBuffer != null) TangentBuffer.Release();
         if (UVBuffer != null) UVBuffer.Release();
         if (MaterialBuffer != null) MaterialBuffer.Release();
         if (TLASBuffer != null) TLASBuffer.Release();
@@ -379,6 +426,7 @@ public class ObjectManager
         if (AlbedoTextures != null) UnityEngine.Object.Destroy(AlbedoTextures);
         if (EmissionTextures != null) UnityEngine.Object.Destroy(EmissionTextures);
         if (MetallicTextures != null) UnityEngine.Object.Destroy(MetallicTextures);
+        if (NormalTextures != null) UnityEngine.Object.Destroy(NormalTextures);
     }
 
     private static Vector4 ColorToVector4(Color color)
@@ -399,6 +447,9 @@ public class ObjectManager
             texWidth = Mathf.Max(texWidth, tex.width);
             texHeight = Mathf.Max(texHeight, tex.height);
         }
+        int maxDim = TextureManager.GetMaxDimension(textures.Count, Mathf.Max(texWidth, texHeight));
+        texWidth = Mathf.Min(texWidth, maxDim);
+        texHeight = Mathf.Min(texHeight, maxDim);
         var newTexture = new Texture2DArray(
             texWidth, texHeight, Mathf.Max(1, textures.Count),
             TextureFormat.ARGB32, true, false

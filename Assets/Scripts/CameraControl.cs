@@ -108,6 +108,7 @@ public class CameraControl : MonoBehaviour
     private void ToggleComputeControl()
     {
         Tracing.ComputeLock = !Tracing.ComputeLock;
+        Tracing.ComputeLockUpdated = true;
         Camera currentCamera = GetComponent<Camera>();
         if(Tracing.ComputeLock)
         {

@@ -37,6 +37,7 @@ public class Tracing : MonoBehaviour
     int DenoiserStartSamples = 100;
 
     public static bool ComputeLock = false;
+    public static bool ComputeLockUpdated = false;
 
     private RenderTexture frameTarget;
     private RenderTexture frameConverged;
@@ -57,6 +58,11 @@ public class Tracing : MonoBehaviour
 
     private void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
+        if(ComputeLockUpdated)
+        {
+            ResetSamples();
+            ComputeLockUpdated = false;
+        }
         if(ComputeLock)
         {
             Graphics.Blit(source, destination);
@@ -155,6 +161,7 @@ public class Tracing : MonoBehaviour
             if (ObjectManager.VertexBuffer != null) shader.SetBuffer(0, "_Vertices", ObjectManager.VertexBuffer);
             if (ObjectManager.IndexBuffer != null) shader.SetBuffer(0, "_Indices", ObjectManager.IndexBuffer);
             if (ObjectManager.NormalBuffer != null) shader.SetBuffer(0, "_Normals", ObjectManager.NormalBuffer);
+            if (ObjectManager.TangentBuffer != null) shader.SetBuffer(0, "_Tangents", ObjectManager.TangentBuffer);
             if (ObjectManager.UVBuffer != null) shader.SetBuffer(0, "_UVs", ObjectManager.UVBuffer);
             if (ObjectManager.MaterialBuffer != null) shader.SetBuffer(0, "_Materials", ObjectManager.MaterialBuffer);
             if (ObjectManager.TLASBuffer != null) shader.SetBuffer(0, "_TNodes", ObjectManager.TLASBuffer);
@@ -164,6 +171,7 @@ public class Tracing : MonoBehaviour
             if (ObjectManager.AlbedoTextures != null) shader.SetTexture(0, "_AlbedoTextures", ObjectManager.AlbedoTextures);
             if (ObjectManager.EmissionTextures != null) shader.SetTexture(0, "_EmitTextures", ObjectManager.EmissionTextures);
             if (ObjectManager.MetallicTextures != null) shader.SetTexture(0, "_MetallicTextures", ObjectManager.MetallicTextures);
+            if (ObjectManager.NormalTextures != null) shader.SetTexture(0, "_NormalTextures", ObjectManager.NormalTextures);
         }
     }
 
