@@ -159,6 +159,38 @@ Denoised views:
 <img src="Images/sponza_lion.png" width="600" alt="sponza_lion">  
 <img src="Images/sponza_down.png" width="600" alt="sponza_down">
 
+### Room
+
+Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/room)
+
+Support emission maps and metallic maps.  
+Support cutoff render mode (skip geometry if alpha < 1.0).  
+Added bvh build for TLAS (but not used in this scene, see side note).  
+Added sRGB color space conversion for texture maps.  
+Change camera fov and add keyboard combination for material reloading.  
+Support directional light in the scene (regarded as sun light), and tweak the lighting for transparent materials.
+
+Scene Info:
+```
+TLAS nodes = 25
+TLAS raw nodes = 45
+BLAS nodes = 1225193
+Total vertices = 469711
+Total indices = 4042797
+Total normals = 469711
+Total materials = 46
+Total albedo textures = 2
+Total emissive textures = 0
+Total metallic textures = 0
+```
+Expect a low fps.
+
+Denoised view:  
+<img src="Images/room.png" width="600" alt="room"> 
+
+_Side Note_:  
+My previous implementation regards TLAS nodes as an array. For each ray, it loops the full array, tests intersections with bounding volumes and enters BLAS nodes if hit. In scenes such as Sponza, number of TLAS nodes can be large. Therefore, I created another BVH for TLAS nodes, and the ray first recurse in the TLAS tree to find a hit and then enter the corresponding BLAS node. However, based on my experiments, this modification makes rendering even slower. The reason is probably because each node in TLAS tree may have overlapping bounding areas for left and right children. This potentially increases the amount of intersection tests in intermediate nodes that are not leaves. (which affects BLAS tree as well) I think the next improvement is to find a space partition strategy for geometries that reduces overlapping areas to minimum.
+
 ------
 
 ### Controls
@@ -174,6 +206,7 @@ Scroll up -> move forward
 Scroll down -> move backward
 Left CTRL + X -> save screenshot in data folder
 Left CTRL + V -> toggle denoiser (default is off)
+Left CTRL + R -> Reload materials and light info (editor only)
 ```
 
 ------
