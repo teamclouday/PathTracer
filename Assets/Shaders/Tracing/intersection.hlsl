@@ -247,11 +247,18 @@ bool IntersectBlasTreeFast(Ray ray, int startIdx, float targetDist)
                     float3 v0 = _Vertices[_Indices[i]];
                     float3 v1 = _Vertices[_Indices[i + 1]];
                     float3 v2 = _Vertices[_Indices[i + 2]];
+                    float2 uv0 = _UVs[_Indices[i]];
+                    float2 uv1 = _UVs[_Indices[i + 1]];
+                    float2 uv2 = _UVs[_Indices[i + 2]];
                     float t, u, v;
                     if (IntersectTriangle(ray, v0, v1, v2, t, u, v))
                     {
                         if (t > 0.0 && t < targetDist)
                         {
+                            MaterialData mat = _Materials[node.materialIdx];
+                            float2 uv = uv1 * u + uv2 * v + uv0 * (1.0 - u - v);
+                            if (mat.mode == 1.0 && GetColorAlpha(mat.color, mat.albedoIdx, uv) < 1.0)
+                                continue;
                             return true;
                         }
                     }
@@ -350,6 +357,26 @@ bool IntersectTlasTreeFast(Ray ray, HitInfo bestHit, float targetDist)
                 stack[++stackPtr] = node.childIdx;
                 stack[++stackPtr] = node.childIdx + 1;
             }
+        }
+    }
+    return false;
+}
+
+bool IntersectTlasFast(Ray ray, HitInfo bestHit, float targetDist)
+{
+    uint size, stride;
+    _TNodesRaw.GetDimensions(size, stride);
+    for (uint i = 0; i < size; i++)
+    {
+        TLASNodeRaw node = _TNodesRaw[i];
+        if (IntersectBox3(ray, bestHit, node.boundMax, node.boundMin))
+        {
+            // intersect with BLAS tree
+            Ray localRay = PrepareTreeEnterRay(ray, node.transformIdx);
+            PrepareTreeEnterHit(localRay, bestHit, node.transformIdx);
+            if (IntersectBlasTreeFast(localRay, node.rootIdx, targetDist))
+                return true;
+            PrepareTreeExit(ray, bestHit, node.transformIdx);
         }
     }
     return false;

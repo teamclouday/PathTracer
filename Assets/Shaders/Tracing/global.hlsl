@@ -23,6 +23,7 @@ float2 _PixelOffset;
 
 // directional light info
 float4 _DirectionalLight;
+float3 _DirectionalLightColor;
 
 // trace depth
 int _TraceDepth;

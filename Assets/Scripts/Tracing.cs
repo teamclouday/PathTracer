@@ -51,6 +51,7 @@ public class Tracing : MonoBehaviour
     private int dispatchGroupX, dispatchGroupY;
 
     private Vector4 directionalLightInfo;
+    private Vector3 directionalLightColorInfo;
 
     private Denoise denoiser;
 
@@ -149,6 +150,7 @@ public class Tracing : MonoBehaviour
             shader.SetFloat("_SkyboxIntensity", SkyboxIntensity);
             // set directional light
             shader.SetVector("_DirectionalLight", directionalLightInfo);
+            shader.SetVector("_DirectionalLightColor", directionalLightColorInfo);
             // set objects info
             if (ObjectManager.VertexBuffer != null) shader.SetBuffer(0, "_Vertices", ObjectManager.VertexBuffer);
             if (ObjectManager.IndexBuffer != null) shader.SetBuffer(0, "_Indices", ObjectManager.IndexBuffer);
@@ -280,6 +282,7 @@ public class Tracing : MonoBehaviour
         if(Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.R) && Application.isEditor)
         {
             ObjectManager.ReloadMaterials();
+            UpdateDirectionalLight();
             ResetSamples();
         }
     }
@@ -300,6 +303,11 @@ public class Tracing : MonoBehaviour
         directionalLightInfo = new Vector4(
             -dir.x, -dir.y, -dir.z,
             DirectionalLight.intensity
+        );
+        directionalLightColorInfo = new Vector3(
+            DirectionalLight.color.r,
+            DirectionalLight.color.g,
+            DirectionalLight.color.b
         );
     }
 

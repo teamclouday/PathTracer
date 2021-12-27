@@ -11,7 +11,8 @@ bool TraceHit(Ray ray, float targetDist)
 {
     HitInfo bestHit = CreateHitInfo();
     // check tlas intersection
-    return IntersectTlasTreeFast(ray, bestHit, targetDist);
+    //return IntersectTlasTreeFast(ray, bestHit, targetDist);
+    return IntersectTlasFast(ray, bestHit, targetDist);
 }
 
 // trace a ray and detect nearest hit
@@ -19,8 +20,8 @@ HitInfo Trace(Ray ray)
 {
     HitInfo bestHit = CreateHitInfo();
     // check tlas intersection
-    IntersectTlasTree(ray, bestHit);
-    //IntersectTlas(ray, bestHit);
+    //IntersectTlasTree(ray, bestHit);
+    IntersectTlas(ray, bestHit);
     return bestHit;
 }
 
@@ -31,6 +32,18 @@ float3 Shade(inout Ray ray, HitInfo hit)
     {
         //ray.energy = 0.0;
         //return hit.norm * 0.5 + 0.5;
+        
+        // sample directional light
+        Ray shadowRay = CreateRay(hit.pos + hit.norm * 1e-5, _DirectionalLight.xyz);
+        float3 lightContrib = _DirectionalLight.w;
+        if (_DirectionalLight.w <= 0.0 || TraceHit(shadowRay, 1.#INF))
+        {
+            lightContrib = 0.0;
+        }
+        else
+        {
+            lightContrib *= hit.colors.albedo * saturate(dot(hit.norm, _DirectionalLight.xyz)) * _DirectionalLightColor;
+        }
         
         float random = rand();
         if(hit.mode >= 3.0)
@@ -44,12 +57,14 @@ float3 Shade(inout Ray ray, HitInfo hit)
             {
                 ray.dir = normalize(SampleHemisphere3(reflect(ray.dir, hit.norm), 1e5 * kr));
                 ray.energy *= clamp(1.0 / kr, 0.0, 1e2) * hit.colors.specular * clamp(dot(hit.norm, ray.dir), 0.8, 1.0);
+                lightContrib *= saturate(kr);
             }
             else
             {
                 kr = 1.0 - kr;
                 ray.dir = normalize(SampleHemisphere3(refract(ray.dir, hit.norm, 1.0 / ior), 1e5 * kr));
                 ray.energy *= clamp(1.0 / kr, 0.0, 1e2) * hit.colors.albedo * clamp(dot(-hit.norm, ray.dir), 0.8, 1.0);
+                lightContrib *= saturate(kr);
             }
         }
         else
@@ -73,7 +88,7 @@ float3 Shade(inout Ray ray, HitInfo hit)
                 ray.energy *= 1.0 / diffChance * 2.0 * hit.colors.albedo * saturate(dot(hit.norm, ray.dir));
             }
         }
-        return hit.colors.emission;
+        return hit.colors.emission + lightContrib;
         
     }
     else
