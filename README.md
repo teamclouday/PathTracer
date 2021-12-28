@@ -200,6 +200,10 @@ W -> camera forward
 S -> camera backward
 A -> camera left
 D -> camera right
+UP -> light rotation X increases
+DOWN -> light rotation X decreases
+RIGHT -> light rotation Y decreases
+LEFT -> light rotation Y increases
 ESC -> quit application
 Left click and drag -> camera look around
 Scroll up -> move forward
@@ -207,6 +211,7 @@ Scroll down -> move backward
 Left CTRL + X -> save screenshot in data folder
 Left CTRL + V -> toggle denoiser (default is off)
 Left CTRL + R -> Reload materials and light info (editor only)
+Left CTRL + SPACE -> Switch between Unity renderer and Path tracer
 ```
 
 ------

@@ -163,7 +163,7 @@ MonoBehaviour:
   CameraFocalDistance: 1
   CameraAperture: 0
   EnableDenoiser: 0
-  DenoiserStartSamples: 100
+  DenoiserStartSamples: 40
 --- !u!20 &124497782
 Camera:
   m_ObjectHideFlags: 0
