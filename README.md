@@ -191,6 +191,39 @@ Denoised view:
 _Side Note_:  
 My previous implementation regards TLAS nodes as an array. For each ray, it loops the full array, tests intersections with bounding volumes and enters BLAS nodes if hit. In scenes such as Sponza, number of TLAS nodes can be large. Therefore, I created another BVH for TLAS nodes, and the ray first recurse in the TLAS tree to find a hit and then enter the corresponding BLAS node. However, based on my experiments, this modification makes rendering even slower. The reason is probably because each node in TLAS tree may have overlapping bounding areas for left and right children. This potentially increases the amount of intersection tests in intermediate nodes that are not leaves. (which affects BLAS tree as well) I think the next improvement is to find a space partition strategy for geometries that reduces overlapping areas to minimum.
 
+### Exterior
+
+Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/exterior)
+
+Support normal maps and roughness maps (for Autodesk interactive shader materials).  
+Possible to adjust directional light rotation at runtime.  
+Now able to toggle between Unity renderer and Path tracer. It is recommended to move camera and adjust light direction in Unity renderer mode and then switch back to Path tracer.
+
+Scene Info:
+```
+TLAS nodes = 2973
+TLAS raw nodes = 1615
+BLAS nodes = 4821155
+Total vertices = 2921248
+Total indices = 8500071
+Total normals = 2921248
+Total tangents = 2921248
+Total materials = 1616
+Total albedo textures = 106
+Total emissive textures = 6
+Total metallic textures = 0
+Total normal textures = 86
+Total roughness textures = 0
+```
+Expect a low fps and the longest loading time.
+Do not launch with a large window size, or DirectX may crash.
+
+Denoised views:  
+<img src="Images/exterior_v1.png" width="500" alt="exterior_v1">  
+<img src="Images/exterior_v2.png" width="500" alt="exterior_v2">  
+<img src="Images/exterior_v3.png" width="500" alt="exterior_v3">  
+<img src="Images/exterior_v4.png" width="500" alt="exterior_v4">  
+
 ------
 
 ### Controls
