@@ -11,8 +11,8 @@ bool TraceHit(Ray ray, float targetDist)
 {
     HitInfo bestHit = CreateHitInfo();
     // check tlas intersection
-    //return IntersectTlasTreeFast(ray, bestHit, targetDist);
-    return IntersectTlasFast(ray, bestHit, targetDist);
+    return IntersectTlasTreeFast(ray, bestHit, targetDist);
+    //return IntersectTlasFast(ray, bestHit, targetDist);
 }
 
 // trace a ray and detect nearest hit
@@ -20,8 +20,8 @@ HitInfo Trace(Ray ray)
 {
     HitInfo bestHit = CreateHitInfo();
     // check tlas intersection
-    //IntersectTlasTree(ray, bestHit);
-    IntersectTlas(ray, bestHit);
+    IntersectTlasTree(ray, bestHit);
+    //IntersectTlas(ray, bestHit);
     return bestHit;
 }
 

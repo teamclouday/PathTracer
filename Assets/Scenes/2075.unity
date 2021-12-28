@@ -253,7 +253,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5313935049354591619, guid: 3894cc1b4e327794fa439e28926a4d28, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 2.25
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 5313935049354591619, guid: 3894cc1b4e327794fa439e28926a4d28, type: 3}
       propertyPath: m_LocalRotation.w
@@ -408,7 +408,7 @@ MonoBehaviour:
   RayTracingShader: {fileID: 7200000, guid: 665d1ef5183a88c43ad98a3cf93e0ddd, type: 3}
   InfoShader: {fileID: 7200000, guid: b9568c70d14d4ae49a257b1843b38f9a, type: 3}
   DirectionalLight: {fileID: 1402373144}
-  SkyboxTexture: {fileID: 8900000, guid: 28451103b3acf794c80b3f60d98284cb, type: 2}
+  SkyboxTexture: {fileID: 8900000, guid: b5048f0d8dca2ee41aaf9a2aecf4fa94, type: 2}
   SkyboxIntensity: 1
   TraceDepth: 5
   CameraFocalDistance: 1

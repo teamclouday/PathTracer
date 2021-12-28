@@ -241,9 +241,9 @@ public class Tracing : MonoBehaviour
         // set directional light info
         UpdateDirectionalLight();
         // init directional light pitch and yaw
-        var rot = DirectionalLight.transform.rotation;
-        directionalLightPitch = -rot.eulerAngles.x * Mathf.Deg2Rad;
-        directionalLightYaw = rot.eulerAngles.y * Mathf.Deg2Rad - Mathf.PI;
+        var rot = DirectionalLight.transform.eulerAngles;
+        directionalLightPitch = -rot.x * Mathf.Deg2Rad;
+        directionalLightYaw = 0.5f * Mathf.PI - rot.y * Mathf.Deg2Rad;
     }
 
     private void Start()
