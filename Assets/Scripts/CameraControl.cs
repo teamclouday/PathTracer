@@ -47,12 +47,15 @@ public class CameraControl : MonoBehaviour
         {
             _mouseDown = true;
             _mousePos = Input.mousePosition;
-            ToggleComputeControl();
         }
         // check for click and drag
         if (Input.GetMouseButtonUp(0))
         {
             _mouseDown = false;
+        }
+        // CTRL+Space for camera render mode toggle
+        if(Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Space))
+        {
             ToggleComputeControl();
         }
         if(_mouseDown)
@@ -67,22 +70,22 @@ public class CameraControl : MonoBehaviour
             updated = true;
         }
         // check for key controls
-        if(Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow))
+        if(Input.GetKey(KeyCode.A))
         {
             _pos += _right * keySpeed;
             updated = true;
         }
-        if(Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow))
+        if(Input.GetKey(KeyCode.D))
         {
             _pos -= _right * keySpeed;
             updated = true;
         }
-        if(Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))
+        if(Input.GetKey(KeyCode.W))
         {
             _pos += _dir * keySpeed;
             updated = true;
         }
-        if(Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))
+        if(Input.GetKey(KeyCode.S))
         {
             _pos -= _dir * keySpeed;
             updated = true;

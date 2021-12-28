@@ -53,6 +53,9 @@ public class Tracing : MonoBehaviour
 
     private Vector4 directionalLightInfo;
     private Vector3 directionalLightColorInfo;
+    // angles in radians
+    private float directionalLightYaw = 0.0f;
+    private float directionalLightPitch = 0.0f;
 
     private Denoise denoiser;
 
@@ -172,6 +175,7 @@ public class Tracing : MonoBehaviour
             if (ObjectManager.EmissionTextures != null) shader.SetTexture(0, "_EmitTextures", ObjectManager.EmissionTextures);
             if (ObjectManager.MetallicTextures != null) shader.SetTexture(0, "_MetallicTextures", ObjectManager.MetallicTextures);
             if (ObjectManager.NormalTextures != null) shader.SetTexture(0, "_NormalTextures", ObjectManager.NormalTextures);
+            if (ObjectManager.RoughnessTextures != null) shader.SetTexture(0, "_RoughnessTextures", ObjectManager.RoughnessTextures);
         }
     }
 
@@ -236,6 +240,10 @@ public class Tracing : MonoBehaviour
             collectMaterial = new Material(Shader.Find("Hidden/Collect"));
         // set directional light info
         UpdateDirectionalLight();
+        // init directional light pitch and yaw
+        var rot = DirectionalLight.transform.rotation;
+        directionalLightPitch = -rot.eulerAngles.x * Mathf.Deg2Rad;
+        directionalLightYaw = rot.eulerAngles.y * Mathf.Deg2Rad - Mathf.PI;
     }
 
     private void Start()
@@ -293,6 +301,23 @@ public class Tracing : MonoBehaviour
             UpdateDirectionalLight();
             ResetSamples();
         }
+        // control light rotation
+        if(Input.GetKey(KeyCode.UpArrow))
+        {
+            UpdateDirectionalLight(0.0f, 1.0f);
+        }
+        if(Input.GetKey(KeyCode.DownArrow))
+        {
+            UpdateDirectionalLight(0.0f, -1.0f);
+        }
+        if (Input.GetKey(KeyCode.LeftArrow))
+        {
+            UpdateDirectionalLight(-1.0f, 0.0f);
+        }
+        if (Input.GetKey(KeyCode.RightArrow))
+        {
+            UpdateDirectionalLight(1.0f, 0.0f);
+        }
     }
 
     private void OnDestroy()
@@ -317,6 +342,21 @@ public class Tracing : MonoBehaviour
             DirectionalLight.color.g,
             DirectionalLight.color.b
         );
+    }
+
+    private void UpdateDirectionalLight(float x, float y)
+    {
+        // modify directional light rotation
+        directionalLightPitch -= x * Mathf.Deg2Rad;
+        directionalLightYaw -= y * Mathf.Deg2Rad;
+        Vector3 dir = new Vector3(
+            Mathf.Cos(directionalLightYaw) * Mathf.Cos(directionalLightPitch),
+            Mathf.Sin(directionalLightPitch),
+            Mathf.Sin(directionalLightYaw) * Mathf.Cos(directionalLightPitch)
+        );
+        DirectionalLight.transform.position = Vector3.zero;
+        DirectionalLight.transform.LookAt(dir);
+        DirectionalLight.transform.hasChanged = true;
     }
 
     private Vector2 GeneratePixelOffset()

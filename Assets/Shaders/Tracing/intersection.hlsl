@@ -125,7 +125,7 @@ void IntersectMeshObject(Ray ray, inout HitInfo bestHit, MeshData mesh)
                 bestHit.norm = normalize(norm);
                 bestHit.colors = CreateColors(
                     mat.color.rgb, mat.emission, mat.metallic, mat.smoothness,
-                    int3(mat.albedoIdx, mat.metalIdx, mat.emitIdx), uv
+                    int4(mat.albedoIdx, mat.metalIdx, mat.emitIdx, mat.roughIdx), uv
                 );
                 bestHit.mode = mat.mode;
             }
@@ -201,7 +201,7 @@ void IntersectBlasTree(Ray ray, inout HitInfo bestHit, int startIdx, int transfo
                             bestHit.norm = normalize(mul(localToWorld, float4(norm, 0.0)).xyz);
                             bestHit.colors = CreateColors(
                                 mat.color.rgb, mat.emission, mat.metallic, mat.smoothness,
-                                int3(mat.albedoIdx, mat.metalIdx, mat.emitIdx), uv
+                                int4(mat.albedoIdx, mat.metalIdx, mat.emitIdx, mat.roughIdx), uv
                             );
                             bestHit.mode = mat.mode;
                         }
@@ -309,10 +309,10 @@ void IntersectTlas(Ray ray, inout HitInfo bestHit)
     for (uint i = 0; i < size; i++)
     {
         TLASNodeRaw node = _TNodesRaw[i];
-        if (IntersectBox3(ray, bestHit, node.boundMax, node.boundMin))
+        Ray localRay = PrepareTreeEnterRay(ray, node.transformIdx);
+        if (IntersectBox2(localRay, node.boundMax, node.boundMin))
         {
             // intersect with BLAS tree
-            Ray localRay = PrepareTreeEnterRay(ray, node.transformIdx);
             PrepareTreeEnterHit(localRay, bestHit, node.transformIdx);
             IntersectBlasTree(localRay, bestHit, node.rootIdx, node.transformIdx);
             PrepareTreeExit(ray, bestHit, node.transformIdx);
@@ -363,10 +363,10 @@ bool IntersectTlasFast(Ray ray, HitInfo bestHit, float targetDist)
     for (uint i = 0; i < size; i++)
     {
         TLASNodeRaw node = _TNodesRaw[i];
-        if (IntersectBox3(ray, bestHit, node.boundMax, node.boundMin))
+        Ray localRay = PrepareTreeEnterRay(ray, node.transformIdx);
+        if (IntersectBox2(localRay, node.boundMax, node.boundMin))
         {
             // intersect with BLAS tree
-            Ray localRay = PrepareTreeEnterRay(ray, node.transformIdx);
             PrepareTreeEnterHit(localRay, bestHit, node.transformIdx);
             if (IntersectBlasTreeFast(localRay, node.rootIdx, targetDist))
                 return true;

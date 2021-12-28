@@ -83,6 +83,7 @@ struct MaterialData
     int emitIdx;
     int metalIdx;
     int normIdx;
+    int roughIdx;
 };
 StructuredBuffer<MaterialData> _Materials;
 
@@ -101,6 +102,8 @@ Texture2DArray<float4> _MetallicTextures;
 SamplerState sampler_MetallicTextures;
 Texture2DArray<float4> _NormalTextures;
 SamplerState sampler_NormalTextures;
+Texture2DArray<float4> _RoughnessTextures;
+SamplerState sampler_RoughnessTextures;
 
 // current pixel center
 //float2 PixelCenter;

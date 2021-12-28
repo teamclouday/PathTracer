@@ -29,8 +29,9 @@ public struct MaterialData
     public int EmitIdx;
     public int MetallicIdx;
     public int NormalIdx;
+    public int RoughIdx;
 
-    public static int TypeSize = sizeof(float)*10+sizeof(int)*4;
+    public static int TypeSize = sizeof(float)*10+sizeof(int)*5;
 }
 
 /// <summary>
@@ -129,6 +130,7 @@ public class ObjectManager
     public static Texture2DArray EmissionTextures = null;
     public static Texture2DArray MetallicTextures = null;
     public static Texture2DArray NormalTextures = null;
+    public static Texture2DArray RoughnessTextures = null;
 
     private static bool objectUpdated = false;
     private static bool objectTransformUpdated = false;
@@ -185,6 +187,7 @@ public class ObjectManager
         List<Texture2D> emitTex = new List<Texture2D>();
         List<Texture2D> metalTex = new List<Texture2D>();
         List<Texture2D> normTex = new List<Texture2D>();
+        List<Texture2D> roughTex = new List<Texture2D>();
 
         // add default material if submesh does not have a material
         materials.Add(new MaterialData()
@@ -197,7 +200,8 @@ public class ObjectManager
             AlbedoIdx = -1,
             EmitIdx = -1,
             MetallicIdx = -1,
-            NormalIdx = -1
+            NormalIdx = -1,
+            RoughIdx = -1
         });
 
         // get info from each object
@@ -210,44 +214,54 @@ public class ObjectManager
             int matCount = meshMats.Length;
             foreach(var mat in meshMats)
             {
-                int albedoTexIdx = -1, emiTexIdx = -1, metalTexIdx = -1, normTexIdx = -1;
-                if (mat.mainTexture != null)
+                int albedoTexIdx = -1, emiTexIdx = -1, metalTexIdx = -1, normTexIdx = -1, roughTexIdx = -1;
+                if (mat.HasProperty("_MainTex"))
                 {
                     albedoTexIdx = albedoTex.IndexOf(mat.mainTexture as Texture2D);
-                    if(albedoTexIdx < 0)
+                    if(albedoTexIdx < 0 && mat.mainTexture != null)
                     {
                         albedoTexIdx = albedoTex.Count;
                         albedoTex.Add(mat.mainTexture as Texture2D);
                     }
                 }
-                var emitMap = mat.GetTexture("_EmissionMap");
-                if (emitMap != null)
+                if (mat.HasProperty("_EmissionMap"))
                 {
+                    var emitMap = mat.GetTexture("_EmissionMap");
                     emiTexIdx = emitTex.IndexOf(emitMap as Texture2D);
-                    if (emiTexIdx < 0)
+                    if (emiTexIdx < 0 && emitMap != null)
                     {
                         emiTexIdx = emitTex.Count;
                         emitTex.Add(emitMap as Texture2D);
                     }
                 }
-                var metalMap = mat.GetTexture("_MetallicGlossMap");
-                if (metalMap != null)
+                if (mat.HasProperty("_MetallicGlossMap"))
                 {
+                    var metalMap = mat.GetTexture("_MetallicGlossMap");
                     metalTexIdx = metalTex.IndexOf(metalMap as Texture2D);
-                    if (metalTexIdx < 0)
+                    if (metalTexIdx < 0 && metalMap != null)
                     {
                         metalTexIdx = metalTex.Count;
                         metalTex.Add(metalMap as Texture2D);
                     }
                 }
-                var normMap = mat.GetTexture("_BumpMap");
-                if (normMap != null)
+                if (mat.HasProperty("_BumpMap"))
                 {
+                    var normMap = mat.GetTexture("_BumpMap");
                     normTexIdx = normTex.IndexOf(normMap as Texture2D);
-                    if (normTexIdx < 0)
+                    if (normTexIdx < 0 && normMap != null)
                     {
                         normTexIdx = normTex.Count;
                         normTex.Add(normMap as Texture2D);
+                    }
+                }
+                if (mat.HasProperty("_SpecGlossMap"))
+                {
+                    var roughMap = mat.GetTexture("_SpecGlossMap"); // assume Autodesk interactive shader
+                    roughTexIdx = roughTex.IndexOf(roughMap as Texture2D);
+                    if (roughTexIdx < 0 && roughMap != null)
+                    {
+                        roughTexIdx = roughTex.Count;
+                        roughTex.Add(roughMap as Texture2D);
                     }
                 }
                 materials.Add(new MaterialData()
@@ -262,6 +276,7 @@ public class ObjectManager
                     EmitIdx = emiTexIdx, // texture index for emission map
                     MetallicIdx = metalTexIdx, // texture index for metallic map
                     NormalIdx = normTexIdx, // texture index for normal map
+                    RoughIdx = roughTexIdx, // texture index for roughness map
                 });
             }
 
@@ -307,10 +322,12 @@ public class ObjectManager
         if (EmissionTextures != null) UnityEngine.Object.Destroy(EmissionTextures);
         if (MetallicTextures != null) UnityEngine.Object.Destroy(MetallicTextures);
         if (NormalTextures != null) UnityEngine.Object.Destroy(NormalTextures);
+        if (RoughnessTextures != null) UnityEngine.Object.Destroy(RoughnessTextures);
         AlbedoTextures = CreateTextureArray(ref albedoTex);
         EmissionTextures = CreateTextureArray(ref emitTex);
         MetallicTextures = CreateTextureArray(ref metalTex);
         NormalTextures = CreateTextureArray(ref normTex);
+        RoughnessTextures = CreateTextureArray(ref roughTex);
 
         // final report
         Debug.Log(
@@ -326,7 +343,8 @@ public class ObjectManager
             "Total albedo textures = " + albedoTex.Count + "\n" +
             "Total emissive textures = " + emitTex.Count + "\n" +
             "Total metallic textures = " + metalTex.Count + "\n" +
-            "Total normal textures = " + normTex.Count
+            "Total normal textures = " + normTex.Count + "\n" +
+            "Total roughness textures = " + roughTex.Count
         );
 
         objectUpdated = false;
@@ -371,7 +389,8 @@ public class ObjectManager
                     AlbedoIdx = materials[matIdx].AlbedoIdx,
                     EmitIdx = materials[matIdx].EmitIdx,
                     MetallicIdx = materials[matIdx].MetallicIdx,
-                    NormalIdx = materials[matIdx].NormalIdx
+                    NormalIdx = materials[matIdx].NormalIdx,
+                    RoughIdx = materials[matIdx].RoughIdx,
                 };
                 matIdx++;
             }
@@ -385,19 +404,7 @@ public class ObjectManager
         if (tnodesRaw.Count <= 0) return;
         if (transforms.Count <= 0) LoadTransforms();
         tnodes.Clear();
-        // multiply transforms to get world space scale
-        for(int i = 0; i < tnodesRaw.Count; i++)
-        {
-            var node = tnodesRaw[i];
-            tnodesRaw[i] = new TLASRawNode()
-            {
-                BoundMax = transforms[node.TransformIdx * 2].MultiplyPoint3x4(node.BoundMax),
-                BoundMin = transforms[node.TransformIdx * 2].MultiplyPoint3x4(node.BoundMin),
-                TransformIdx = node.TransformIdx,
-                NodeRootIdx = node.NodeRootIdx
-            };
-        }
-        BVH tlasTree = BVH.Construct(tnodesRaw, BVHConstructorType);
+        BVH tlasTree = BVH.Construct(tnodesRaw, transforms, BVHConstructorType);
         tlasTree.FlattenTLAS(ref tnodesRaw, ref tnodes);
         UpdateBuffer(ref TLASBuffer, tnodes, TLASNode.TypeSize);
         UpdateBuffer(ref TLASRawBuffer, tnodesRaw, TLASRawNode.TypeSize);
@@ -427,6 +434,7 @@ public class ObjectManager
         if (EmissionTextures != null) UnityEngine.Object.Destroy(EmissionTextures);
         if (MetallicTextures != null) UnityEngine.Object.Destroy(MetallicTextures);
         if (NormalTextures != null) UnityEngine.Object.Destroy(NormalTextures);
+        if (RoughnessTextures != null) UnityEngine.Object.Destroy(RoughnessTextures);
     }
 
     private static Vector4 ColorToVector4(Color color)

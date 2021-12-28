@@ -277,14 +277,18 @@ public abstract class BVH
         return info;
     }
 
-    protected List<FaceInfo> CreateFaceInfo(List<TLASRawNode> rawNodes)
+    protected List<FaceInfo> CreateFaceInfo(List<TLASRawNode> rawNodes, List<Matrix4x4> transforms)
     {
         List<FaceInfo> info = new List<FaceInfo>();
         for (int i = 0; i < rawNodes.Count; i++)
         {
+            var node = rawNodes[i];
             info.Add(new FaceInfo
             {
-                Bounds = new AABB(rawNodes[i].BoundMin, rawNodes[i].BoundMax),
+                Bounds = new AABB(
+                    transforms[node.TransformIdx * 2].MultiplyPoint3x4(node.BoundMin),
+                    transforms[node.TransformIdx * 2].MultiplyPoint3x4(node.BoundMax)
+                ),
                 FaceIdx = i
             });
             info[i].Center = info[i].Bounds.Center();
@@ -308,16 +312,16 @@ public abstract class BVH
         }
     }
 
-    public static BVH Construct(List<TLASRawNode> rawNodes, BVHType type)
+    public static BVH Construct(List<TLASRawNode> rawNodes, List<Matrix4x4> transforms, BVHType type)
     {
         switch (type)
         {
             case BVHType.Naive:
-                return new BVHNaive(rawNodes);
+                return new BVHNaive(rawNodes, transforms);
             case BVHType.SAH:
-                return new BVHSAH(rawNodes);
+                return new BVHSAH(rawNodes, transforms);
             default:
-                return new BVHNaive(rawNodes);
+                return new BVHNaive(rawNodes, transforms);
         }
     }
 }
@@ -347,10 +351,10 @@ public class BVHSAH : BVH
         BVHRoot = Build(faceInfo, 0, faceInfo.Count);
     }
 
-    public BVHSAH(List<TLASRawNode> rawNodes)
+    public BVHSAH(List<TLASRawNode> rawNodes, List<Matrix4x4> transforms)
     {
         // generate face info
-        var faceInfo = CreateFaceInfo(rawNodes);
+        var faceInfo = CreateFaceInfo(rawNodes, transforms);
         // build tree
         BVHRoot = Build(faceInfo, 0, faceInfo.Count);
     }
@@ -505,10 +509,10 @@ public class BVHNaive : BVH
         BVHRoot = Build(faceInfo, 0, faceInfo.Count);
     }
 
-    public BVHNaive(List<TLASRawNode> rawNodes)
+    public BVHNaive(List<TLASRawNode> rawNodes, List<Matrix4x4> transforms)
     {
         // generate face info
-        var faceInfo = CreateFaceInfo(rawNodes);
+        var faceInfo = CreateFaceInfo(rawNodes, transforms);
         // build tree
         BVHRoot = Build(faceInfo, 0, faceInfo.Count);
     }

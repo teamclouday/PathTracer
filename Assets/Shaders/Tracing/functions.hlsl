@@ -62,7 +62,7 @@ Ray CreateCameraRay(Camera camera, float2 d)
 
 Colors CreateColors(float3 baseColor, float3 emission,
     float metallic, float smoothness,
-    int3 indices = -1, float2 uv = 0.0)
+    int4 indices = -1, float2 uv = 0.0)
 {
     const float alpha = 0.04;
     if (indices.x >= 0)
@@ -79,9 +79,22 @@ Colors CreateColors(float3 baseColor, float3 emission,
     {
         // fetch metallic value
         float4 metallicRoughness = _MetallicTextures.SampleLevel(sampler_MetallicTextures, float3(uv, indices.y), 0.0);
-        metallic = pow(abs(metallicRoughness.r), SRGB_CONVERT);
-        smoothness = pow(abs(metallicRoughness.a), SRGB_CONVERT);
+        //metallic = pow(abs(metallicRoughness.r), SRGB_CONVERT);
+        //smoothness = pow(abs(metallicRoughness.a), SRGB_CONVERT);
+        metallic = metallicRoughness.r;
+        smoothness = metallicRoughness.a;
 
+    }
+    if(indices.w >= 0)
+    {
+        // fetch roughness value
+        //smoothness = pow(abs(_RoughnessTextures.SampleLevel(
+        //        sampler_RoughnessTextures, float3(uv, indices.w), 0.0
+        //    ).x),
+        //    SRGB_CONVERT
+        //);
+        smoothness = _RoughnessTextures.SampleLevel(sampler_RoughnessTextures, float3(uv, indices.w), 0.0).x;
+        smoothness = 1.0 - smoothness;
     }
     Colors colors;
     colors.albedo = lerp(baseColor * (1.0 - alpha), 0.0, metallic);
