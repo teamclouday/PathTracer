@@ -22,7 +22,7 @@ float3 Shade(inout Ray ray, HitInfo hit)
 {
     if (hit.dist < 1.#INF)
     {
-        return hit.colors.emission + hit.colors.albedo;
+        return hit.mat.emission + hit.mat.albedo;
     }
     else
     {
@@ -40,6 +40,7 @@ void CSMain(uint3 id : SV_DispatchThreadID)
     _FrameTarget.GetDimensions(width, height);
     // create camera
     Camera camera = CreateCamera();
+    camera.offset = 0.5;
     // save pixel center
     float2 center = float2(id.xy);
     // init random seed
@@ -51,6 +52,6 @@ void CSMain(uint3 id : SV_DispatchThreadID)
     // write albedo
     _FrameTarget[id.xy] = float4(saturate(Shade(ray, hit)), 1.0);
     // write normal
-    _FrameNormalTarget[id.xy] = float4(hit.norm, 1.0);
+    _FrameNormalTarget[id.xy] = float4(hit.norm, hit.dist);
     
 }

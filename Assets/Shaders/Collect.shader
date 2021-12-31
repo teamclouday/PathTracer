@@ -16,6 +16,7 @@ Shader "Hidden/Collect"
             #pragma fragment frag
 
             #include "UnityCG.cginc"
+            #include "Tracing/colors.hlsl"
 
             struct appdata
             {
@@ -42,7 +43,10 @@ Shader "Hidden/Collect"
 
             fixed4 frag(v2f i) : SV_Target
             {
-                return float4(tex2D(_MainTex, i.uv).rgb, 1.0 / (_SampleCount + 1.0));
+                return Linear2SRGB(
+                    float4(tex2D(_MainTex, i.uv).rgb, 1.0 / (_SampleCount + 1.0))
+                );
+                //return float4(tex2D(_MainTex, i.uv).rgb, 1.0 / (_SampleCount + 1.0));
             }
             ENDCG
         }

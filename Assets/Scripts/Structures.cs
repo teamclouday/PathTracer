@@ -24,6 +24,7 @@ public struct MaterialData
     public Vector3 Emission;
     public float Metallic;
     public float Smoothness;
+    public float IOR;
     public float RenderMode;
     public int AlbedoIdx;
     public int EmitIdx;
@@ -31,7 +32,7 @@ public struct MaterialData
     public int NormalIdx;
     public int RoughIdx;
 
-    public static int TypeSize = sizeof(float)*10+sizeof(int)*5;
+    public static int TypeSize = sizeof(float)*11+sizeof(int)*5;
 }
 
 /// <summary>
@@ -196,6 +197,7 @@ public class ObjectManager
             Emission = Vector3.zero,
             Metallic = 0.0f,
             Smoothness = 0.0f,
+            IOR = 1.0f,
             RenderMode = 0,
             AlbedoIdx = -1,
             EmitIdx = -1,
@@ -271,6 +273,7 @@ public class ObjectManager
                     // assuming standard unity shader
                     Metallic = mat.GetFloat("_Metallic"),
                     Smoothness = mat.GetFloat("_Glossiness"), // smoothness
+                    IOR = mat.HasProperty("_IOR") ? mat.GetFloat("_IOR") : 1.0f,
                     RenderMode = mat.GetFloat("_Mode"), // 0 for opaque, > 0 for transparent
                     AlbedoIdx = albedoTexIdx, // texture index for albedo map, -1 if not exist
                     EmitIdx = emiTexIdx, // texture index for emission map
@@ -305,6 +308,9 @@ public class ObjectManager
             if (meshUVs.Length != meshVertices.Count)
                 Debug.LogWarning("Object " + obj.name + " has different uvs and vertices size");
         }
+
+        // if not UV is used, insert empty one
+        if (uvs.Count <= 0) uvs.Add(Vector2.zero);
 
         // build TLAS bvh
         ReloadTLAS();
@@ -385,6 +391,7 @@ public class ObjectManager
                     Emission = mat.IsKeywordEnabled("_EMISSION") ? ColorToVector3(mat.GetColor("_EmissionColor")) : Vector3.zero,
                     Metallic = mat.GetFloat("_Metallic"),
                     Smoothness = mat.GetFloat("_Glossiness"),
+                    IOR = mat.HasProperty("_IOR") ? mat.GetFloat("_IOR") : 1.0f,
                     RenderMode = mat.GetFloat("_Mode"),
                     AlbedoIdx = materials[matIdx].AlbedoIdx,
                     EmitIdx = materials[matIdx].EmitIdx,

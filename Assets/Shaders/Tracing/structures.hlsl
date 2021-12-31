@@ -21,12 +21,14 @@ struct Ray
     float3 energy;
 };
 
-struct Colors
+struct Material
 {
     float3 albedo;
-    float3 specular;
     float3 emission;
-    float smoothness;
+    float roughness;
+    float metallic;
+    float alpha;
+    float ior;
 };
 
 struct HitInfo
@@ -34,7 +36,7 @@ struct HitInfo
     float dist;
     float3 pos;
     float3 norm;
-    Colors colors;
+    Material mat;
     float mode;
 };
 #endif

@@ -16,7 +16,7 @@ void IntersectGround(Ray ray, inout HitInfo bestHit, float yVal = 0.0)
         bestHit.dist = t;
         bestHit.pos = ray.origin + t * ray.dir;
         bestHit.norm = float3(0.0, 1.0, 0.0);
-        bestHit.colors = CreateColors(1.0, 0.0, 0.0, 0.0);
+        bestHit.mat = CreateMaterial(1.0, 0.0, 0.0, 0.0, 1.0, 1.0);
         bestHit.mode = 0.0;
     }
 }
@@ -118,15 +118,16 @@ void IntersectMeshObject(Ray ray, inout HitInfo bestHit, MeshData mesh)
                 float3 hitPos = ray.origin + t * ray.dir;
                 float2 uv = uv1 * u + uv2 * v + uv0 * (1.0 - u - v);
                 float3 norm = GetNormal(i, float2(u, v), mat.normIdx, uv);
-                if (mat.mode == 1.0 && GetColorAlpha(mat.color, mat.albedoIdx, uv) < 1.0)
+                Material mats = CreateMaterial(
+                    mat.color.rgb, mat.emission, mat.metallic, mat.smoothness, mat.color.a, mat.ior,
+                    int4(mat.albedoIdx, mat.metalIdx, mat.emitIdx, mat.roughIdx), uv
+                );
+                if ((mat.mode == 1.0 && mats.alpha < 1.0) || (mat.mode > 1.0 && SkipTransparent(mats)))
                     continue;
                 bestHit.dist = t;
                 bestHit.pos = hitPos;
                 bestHit.norm = normalize(norm);
-                bestHit.colors = CreateColors(
-                    mat.color.rgb, mat.emission, mat.metallic, mat.smoothness,
-                    int4(mat.albedoIdx, mat.metalIdx, mat.emitIdx, mat.roughIdx), uv
-                );
+                bestHit.mat = mats;
                 bestHit.mode = mat.mode;
             }
         }
@@ -194,15 +195,16 @@ void IntersectBlasTree(Ray ray, inout HitInfo bestHit, int startIdx, int transfo
                             float3 hitPos = ray.origin + t * ray.dir;
                             float2 uv = uv1 * u + uv2 * v + uv0 * (1.0 - u - v);
                             float3 norm = GetNormal(i, float2(u, v), mat.normIdx, uv);
-                            if (mat.mode == 1.0 && GetColorAlpha(mat.color, mat.albedoIdx, uv) < 1.0)
+                            Material mats = CreateMaterial(
+                                mat.color.rgb, mat.emission, mat.metallic, mat.smoothness, mat.color.a, mat.ior,
+                                int4(mat.albedoIdx, mat.metalIdx, mat.emitIdx, mat.roughIdx), uv
+                            );
+                            if (mat.mode == 1.0 && mats.alpha < 1.0)
                                 continue;
                             bestHit.dist = t;
                             bestHit.pos = hitPos;
                             bestHit.norm = normalize(mul(localToWorld, float4(norm, 0.0)).xyz);
-                            bestHit.colors = CreateColors(
-                                mat.color.rgb, mat.emission, mat.metallic, mat.smoothness,
-                                int4(mat.albedoIdx, mat.metalIdx, mat.emitIdx, mat.roughIdx), uv
-                            );
+                            bestHit.mat = mats;
                             bestHit.mode = mat.mode;
                         }
                     }
@@ -251,7 +253,12 @@ bool IntersectBlasTreeFast(Ray ray, int startIdx, float targetDist)
                         {
                             MaterialData mat = _Materials[node.materialIdx];
                             float2 uv = uv1 * u + uv2 * v + uv0 * (1.0 - u - v);
-                            if (mat.mode == 1.0 && GetColorAlpha(mat.color, mat.albedoIdx, uv) < 1.0)
+                            Material mats = CreateMaterial(
+                                mat.color.rgb, mat.emission, mat.metallic, mat.smoothness, mat.color.a, mat.ior,
+                                int4(mat.albedoIdx, mat.metalIdx, mat.emitIdx, mat.roughIdx), uv
+                            );
+                            if (mat.mode == 1.0 && mats.alpha < 1.0 ||
+                                    (mat.mode > 1.0 && SkipTransparent(mats)))
                                 continue;
                             return true;
                         }

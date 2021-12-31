@@ -33,6 +33,18 @@ public class Tracing : MonoBehaviour
     [SerializeField]
     bool EnableDenoiser = false;
 
+    [SerializeField]
+    DenoiserType DenoiseType = DenoiserType.Offline;
+
+    [SerializeField]
+    DenoiseCoeff DenoiserCoefficients = new DenoiseCoeff()
+    {
+        Color = 1.0f,
+        Normal = 0.5f,
+        Depth = 0.3f,
+        Strength = 1
+    }; // coefficient for real time denoiser
+
     [SerializeField, Range(10, 200)]
     int DenoiserStartSamples = 100;
 
@@ -79,13 +91,13 @@ public class Tracing : MonoBehaviour
 
     private void GetSceneInfo()
     {
-        if (sampleCount != DenoiserStartSamples || !EnableDenoiser) return;
+        if (!EnableDenoiser || sampleCount % DenoiserStartSamples != 0) return;
         ValidateTextures();
-        SetShaderParameters(InfoShader, DenoiserStartSamples);
+        SetShaderParameters(InfoShader, 1);
         InfoShader.SetTexture(0, "_FrameTarget", denoiseAlbedo);
         InfoShader.SetTexture(0, "_FrameNormalTarget", denoiseNormal);
         InfoShader.Dispatch(0, dispatchGroupX, dispatchGroupY, 1);
-        Debug.Log("Scene Info fetched");
+        Debug.Log("Scene Info fetched (Samples " + sampleCount + ")");
     }
 
     private void Render(RenderTexture destination)
@@ -93,7 +105,7 @@ public class Tracing : MonoBehaviour
         // check if textures are ready
         ValidateTextures();
         // set shader parameters
-        SetShaderParameters(RayTracingShader, 0);
+        SetShaderParameters(RayTracingShader, 1000);
         // set frame target
         RayTracingShader.SetTexture(0, "_FrameTarget", frameTarget);
         // set sample count in collect shader
@@ -104,23 +116,23 @@ public class Tracing : MonoBehaviour
         Graphics.Blit(frameTarget, frameConverged, collectMaterial);
         if(EnableDenoiser && denoiser != null && sampleCount > DenoiserStartSamples)
         {
-            if(denoiser.FilteredOnce)
+            if (denoiser.FilteredOnce)
             {
                 if (!denoiser.IsRunning)
                 {
-                    denoiser.UpdateTexture();
-                    Graphics.Blit(denoiser.FilteredTexture, destination);
-                    denoiser.Filter(frameConverged, denoiseAlbedo, denoiseNormal);
+                    denoiser.FilteredTexture.Apply();
+                    if (DenoiseType == DenoiserType.Offline)
+                        Graphics.Blit(denoiser.FilteredTexture, destination);
+                    denoiser.Filter(DenoiseType, frameConverged, denoiseAlbedo, denoiseNormal, destination, DenoiserCoefficients);
                 }
-                else
+                else if (DenoiseType == DenoiserType.Offline)
                     Graphics.Blit(denoiser.FilteredTexture, destination);
             }
             else
             {
-                denoiser.Filter(frameConverged, denoiseAlbedo, denoiseNormal);
+                denoiser.Filter(DenoiseType, frameConverged, denoiseAlbedo, denoiseNormal, destination, DenoiserCoefficients);
                 Graphics.Blit(frameConverged, destination);
-            }    
-
+            }
         }
         else
             Graphics.Blit(frameConverged, destination);
@@ -139,7 +151,7 @@ public class Tracing : MonoBehaviour
         // frame count
         shader.SetInt("_FrameCount", (int)sampleCount);
         // only update these parameters if redraw
-        if(sampleCount == targetCount)
+        if (sampleCount % targetCount == 0)
         {
             // set camera info
             shader.SetVector("_CameraPos", mainCamera.transform.position);
@@ -149,7 +161,6 @@ public class Tracing : MonoBehaviour
             shader.SetVector("_CameraInfo", new Vector4(
                 Mathf.Tan(Mathf.Deg2Rad * mainCamera.fieldOfView * 0.5f),
                 CameraFocalDistance,
-                //Mathf.Sqrt(CameraAperture),
                 CameraAperture,
                 frameTarget.width / (float)frameTarget.height
             ));
@@ -361,10 +372,10 @@ public class Tracing : MonoBehaviour
 
     private Vector2 GeneratePixelOffset()
     {
+        // reference: https://github.com/knightcrawler25/GLSL-PathTracer/blob/master/src/shaders/preview.glsl
         //Vector2 offset;
         //float r1 = 2.0f * Random.value;
         //float r2 = 2.0f * Random.value;
-        //// reference: https://github.com/knightcrawler25/GLSL-PathTracer/blob/master/src/shaders/preview.glsl
         //offset.x = r1 < 1.0f ? Mathf.Sqrt(r1) - 1.0f : 1.0f - Mathf.Sqrt(2.0f - r1);
         //offset.y = r2 < 1.0f ? Mathf.Sqrt(r2) - 1.0f : 1.0f - Mathf.Sqrt(2.0f - r2);
         //offset.x += 1.0f;

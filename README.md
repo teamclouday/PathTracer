@@ -259,3 +259,4 @@ Reference:
 [Spatial Splits in Bounding Volume Hierarchies](https://www.nvidia.in/docs/IO/77714/sbvh.pdf)  
 [Recursive SAH-based Bounding Volume Hierarchy Construction](https://www.gcc.tu-darmstadt.de/media/gcc/papers/rsah_gi2016.pdf)  
 [Ray Tracing: The Next Week](https://raytracing.github.io/books/RayTracingTheNextWeek.html)  
+[Casual Shadertoy Path Tracing 3: Fresnel, Rough Refraction & Absorption, Orbit Camera](https://blog.demofox.org/2020/06/14/casual-shadertoy-path-tracing-3-fresnel-rough-refraction-absorption-orbit-camera/)  

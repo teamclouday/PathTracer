@@ -4,6 +4,8 @@
 #include "global.hlsl"
 #include "structures.hlsl"
 #include "random.hlsl"
+#include "colors.hlsl"
+#include "bxdf.hlsl"
 
 Camera CreateCamera()
 {
@@ -31,12 +33,6 @@ Ray CreateRay(float3 origin, float3 direction)
 
 Ray CreateCameraRay(Camera camera, float2 d)
 {
-    //float3 origin = mul(_CameraToWorld, float4(0.0, 0.0, 0.0, 1.0)).xyz;
-    //float3 direction = mul(_CameraProjInv, float4(uv, 0.0, 1.0)).xyz;
-    //direction = mul(_CameraToWorld, float4(direction, 0.0)).xyz;
-    //direction = normalize(direction);
-    //return CreateRay(origin, direction);
-    
     // reference: https://github.com/knightcrawler25/GLSL-PathTracer/blob/master/src/shaders/preview.glsl
     d.x *= camera.ratio * camera.fov_scale;
     d.y *= camera.fov_scale;
@@ -53,79 +49,57 @@ Ray CreateCameraRay(Camera camera, float2 d)
     {
         return CreateRay(camera.pos, dir);
     }
-    //float scale = tan(camera.fov * 0.5f);
-    //d.x *= scale;
-    //d.y *= camera.ratio * scale;
-    //float3 direction = normalize(d.x * camera.right + d.y * camera.up + camera.forward);
-    //return CreateRay(camera.pos, direction);
 }
 
-Colors CreateColors(float3 baseColor, float3 emission,
-    float metallic, float smoothness,
+Material CreateMaterial(float3 baseColor, float3 emission,
+    float metallic, float smoothness, float alpha, float ior,
     int4 indices = -1, float2 uv = 0.0)
 {
-    const float alpha = 0.04;
     if (indices.x >= 0)
     {
         // fetch albedo color
         // and convert from srgb space
-        baseColor = baseColor * pow(abs(_AlbedoTextures.SampleLevel(
-                sampler_AlbedoTextures, float3(uv, indices.x), 0.0
-            ).xyz),
-            SRGB_CONVERT
-        );
+        float4 color = _AlbedoTextures.SampleLevel(sampler_AlbedoTextures, float3(uv, indices.x), 0.0);
+        baseColor = baseColor * color.rgb;
+        alpha = alpha * color.a;
     }
     if (indices.y >= 0)
     {
         // fetch metallic value
         float4 metallicRoughness = _MetallicTextures.SampleLevel(sampler_MetallicTextures, float3(uv, indices.y), 0.0);
-        //metallic = pow(abs(metallicRoughness.r), SRGB_CONVERT);
-        //smoothness = pow(abs(metallicRoughness.a), SRGB_CONVERT);
         metallic = metallicRoughness.r;
         smoothness = metallicRoughness.a;
 
     }
     if(indices.w >= 0)
     {
-        // fetch roughness value
-        //smoothness = pow(abs(_RoughnessTextures.SampleLevel(
-        //        sampler_RoughnessTextures, float3(uv, indices.w), 0.0
-        //    ).x),
-        //    SRGB_CONVERT
-        //);
         smoothness = _RoughnessTextures.SampleLevel(sampler_RoughnessTextures, float3(uv, indices.w), 0.0).x;
         smoothness = 1.0 - smoothness;
     }
-    Colors colors;
-    colors.albedo = lerp(baseColor * (1.0 - alpha), 0.0, metallic);
-    colors.specular = lerp(alpha, baseColor, metallic);
+    Material mat;
+    mat.alpha = alpha;
+    mat.albedo = baseColor;
+    mat.metallic = metallic;
     if (indices.z >= 0)
     {
         // fetch emission value
-        emission = emission * pow(abs(_EmitTextures.SampleLevel(
-                sampler_EmitTextures, float3(uv, indices.z), 0.0
-            ).xyz),
-            SRGB_CONVERT
-        );
+        emission = emission * _EmitTextures.SampleLevel(sampler_EmitTextures, float3(uv, indices.z), 0.0).xyz;
     }
-    colors.emission = emission;
-    colors.smoothness = smoothness;
-    return colors;
+    mat.emission = emission;
+    mat.roughness = 1.0 - smoothness;
+    mat.ior = ior;
+    return mat;
 }
 
-float GetColorAlpha(float4 color, int albedoIdx, float2 uv)
+float GetColorAlpha(float alpha, int albedoIdx, float2 uv)
 {
-    if (albedoIdx >= 0)
+    if(albedoIdx >= 0)
     {
-        return pow(abs(_AlbedoTextures.SampleLevel(
-                sampler_AlbedoTextures, float3(uv, albedoIdx), 0.0
-            ).a),
-            SRGB_CONVERT
-        );
+        return alpha * _AlbedoTextures.SampleLevel(sampler_AlbedoTextures, float3(uv, albedoIdx), 0.0).a;
     }
     else
     {
-        return color.a;
+        return alpha;
     }
 }
 
@@ -163,7 +137,7 @@ HitInfo CreateHitInfo()
     hit.dist = 1.#INF;
     hit.pos = 0.0;
     hit.norm = 0.0;
-    hit.colors = CreateColors(0.0, 0.0, 0.0, 0.0);
+    hit.mat = CreateMaterial(0.0, 0.0, 0.0, 0.0, 1.0, 1.0);
     hit.mode = 0.0;
     return hit;
 }
@@ -231,10 +205,11 @@ float3 SampleDiskPoint(float3 norm)
     return tangent * p.x + bitangent * p.y;
 }
 
-float3 SampleHemisphere3(float3 norm, float alpha = 0.0)
+float3 SampleHemisphere3(float3 norm, float alpha = 1.0)
 {
     float4 rand = rand4();
     float r = pow(rand.w, 1.0 / (1.0 + alpha));
+    //float r = rand.w;
     float angle = rand.y * PI_TWO;
     float sr = sqrt(1.0 - r * r);
     float3 ph = float3(sr * cos(angle), sr * sin(angle), r);
@@ -254,34 +229,11 @@ float3 SampleHemisphere4(float3 norm)
     return v * sign(dot(v, norm));
 }
 
-// reference: https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/reflection-refraction-fresnel
-float Fresnel(float3 dir, float3 norm, float ior)
+bool SkipTransparent(Material mat)
 {
-    float cosi = clamp(dot(dir, norm), -1.0, 1.0);
-    float etai, etat;
-    if(cosi > 0.0)
-    {
-        etai = ior;
-        etat = 1.0;
-    }
-    else
-    {
-        etai = 1.0;
-        etat = ior;
-    }
-    float sint = etai / etat * sqrt(1.0 - cosi * cosi);
-    if(sint >= 1.0)
-    {
-        return 1.0;
-    }
-    else
-    {
-        float cost = sqrt(max(0.0, 1.0 - sint * sint));
-        cosi = abs(cosi);
-        float Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost));
-        float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost));
-        return (Rs * Rs + Rp * Rp) / 2.0;
-    }
+    float f = DielectricFresnel(0.2, mat.ior);
+    float r = mat.roughness * mat.roughness;
+    return rand() < (1.0 - f) * (1.0 - mat.metallic) * (1.0 - r);
 }
 
 // prepare a new ray when entering a BLAS tree

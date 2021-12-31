@@ -78,6 +78,7 @@ struct MaterialData
     float3 emission;
     float metallic;
     float smoothness;
+    float ior;
     float mode;
     int albedoIdx;
     int emitIdx;
@@ -112,6 +113,6 @@ uint4 RandomSeed;
 // define PI value
 #define PI              3.14159265358979323846
 #define PI_TWO          6.28318530717958623198
-// define sRGB conversion value
-#define SRGB_CONVERT    0.45454545454545454545
+
+#define LUM             0.33333333333333333333
 #endif
