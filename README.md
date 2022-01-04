@@ -226,6 +226,38 @@ Denoised views:
 
 ------
 
+### Fireplace Room
+
+Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/fireplaceroom)
+
+Modified rendering equations based on Disney BSDF and refering to online resources.  
+Added support for multiple point lights, with customized illumination formulas.  
+Now able to toggle camera depth of view, and allow camera focus by middle mouse click.  
+Fixed crucial bug in denoiser, and added another optional realtime denoiser with spatial filter shader.  
+
+Scene Info:
+```
+TLAS nodes = 43
+TLAS raw nodes = 24
+BLAS nodes = 261608
+Total vertices = 190085
+Total indices = 429135
+Total normals = 190085
+Total tangents = 190085
+Total materials = 25
+Total albedo textures = 4
+Total emissive textures = 0
+Total metallic textures = 0
+Total normal textures = 0
+Total roughness textures = 0
+```
+
+Denoised views:  
+<img src="Images/fireplace1.png" width="500" alt="fireplace1">  
+<img src="Images/fireplace2.png" width="500" alt="fireplace2">  
+
+------
+
 ### Controls
 
 ```
