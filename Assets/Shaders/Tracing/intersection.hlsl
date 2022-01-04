@@ -367,6 +367,7 @@ bool IntersectTlasFast(Ray ray, HitInfo bestHit, float targetDist)
 {
     uint size, stride;
     _TNodesRaw.GetDimensions(size, stride);
+    float dist = targetDist;
     for (uint i = 0; i < size; i++)
     {
         TLASNodeRaw node = _TNodesRaw[i];
@@ -375,7 +376,8 @@ bool IntersectTlasFast(Ray ray, HitInfo bestHit, float targetDist)
         {
             // intersect with BLAS tree
             PrepareTreeEnterHit(localRay, bestHit, node.transformIdx);
-            if (IntersectBlasTreeFast(localRay, node.rootIdx, targetDist))
+            dist = PrepareTreeEnterTargetDistance(targetDist, node.transformIdx);
+            if (IntersectBlasTreeFast(localRay, node.rootIdx, dist))
                 return true;
             PrepareTreeExit(ray, bestHit, node.transformIdx);
         }

@@ -324,12 +324,19 @@ MonoBehaviour:
   RayTracingShader: {fileID: 7200000, guid: 665d1ef5183a88c43ad98a3cf93e0ddd, type: 3}
   InfoShader: {fileID: 7200000, guid: b9568c70d14d4ae49a257b1843b38f9a, type: 3}
   DirectionalLight: {fileID: 589304398}
+  PointLights: []
   SkyboxTexture: {fileID: 8900000, guid: b5048f0d8dca2ee41aaf9a2aecf4fa94, type: 2}
   SkyboxIntensity: 1
   TraceDepth: 5
   CameraFocalDistance: 1
   CameraAperture: 0
   EnableDenoiser: 0
+  DenoiseType: 0
+  DenoiserCoefficients:
+    Color: 1
+    Normal: 0.5
+    Depth: 0.3
+    Strength: 1
   DenoiserStartSamples: 100
 --- !u!20 &1705645074
 Camera:

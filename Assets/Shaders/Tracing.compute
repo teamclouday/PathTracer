@@ -36,18 +36,38 @@ float3 Shade(inout Ray ray, HitInfo hit)
         //return hit.norm * 0.5 + 0.5;
         
         // sample directional light
-        Ray shadowRay = CreateRay(hit.pos + hit.norm * 1e-5, _DirectionalLight.xyz);
-        float3 lightContrib = _DirectionalLight.w;
-        if (_DirectionalLight.w <= 0.0 || TraceHit(shadowRay, 1.#INF))
+        float3 lightContrib = 0.0;
         {
-            lightContrib = 0.0;
-        }
-        else
-        {
-            lightContrib *= hit.mat.albedo * saturate(dot(hit.norm, _DirectionalLight.xyz)) * _DirectionalLightColor;
+            Ray shadowRay = CreateRay(hit.pos + hit.norm * 1e-5, _DirectionalLight);
+            if (_DirectionalLightColor.a > 0.0 && !TraceHit(shadowRay, 1.#INF))
+            {
+                lightContrib += hit.mat.albedo * saturate(dot(hit.norm, _DirectionalLight)) *
+                    _DirectionalLightColor.rgb * _DirectionalLightColor.a;
+            }
         }
         
-        float random = rand();
+        // sample point lights
+        for (int i = 0; i < _PointLightsCount; i++)
+        {
+            float4 lightPos = _PointLights[i * 2];
+            float4 lightColor = _PointLights[i * 2 + 1];
+            if (lightColor.a <= 0.0)
+                continue;
+            float3 rayDir = lightPos.xyz - hit.pos;
+            float rayDist = length(rayDir);
+            // TODO: maybe can be changed to an variable
+            float distDecay = max(0.0, rayDist - lightPos.w);
+            distDecay = pow(0.2, distDecay * distDecay);
+            rayDir /= rayDist;
+            Ray shadowRay = CreateRay(hit.pos + hit.norm * 1e-5, rayDir);
+            if (!TraceHit(shadowRay, rayDist))
+            {
+                lightContrib += hit.mat.albedo * saturate(dot(hit.norm, rayDir)) *
+                    lightColor.rgb * lightColor.a * distDecay;
+            }
+        }
+        
+            float random = rand();
         if (hit.mode >= 3.0)
         {
             float outside = dot(ray.dir, hit.norm);
@@ -56,7 +76,7 @@ float3 Shade(inout Ray ray, HitInfo hit)
             // dielectric workflow
             hit.norm = normalize(lerp(
                 hit.norm,
-                SampleHemisphere4(hit.norm),
+                SampleHemisphere3(hit.norm),
                 hit.mat.roughness * hit.mat.roughness
             ));
             float3 rayOutDir = normalize(reflect(ray.dir, hit.norm));
@@ -89,7 +109,7 @@ float3 Shade(inout Ray ray, HitInfo hit)
             float diffChance = dot(hit.mat.albedo, LUM) * (1.0 - hit.mat.metallic);
             if (random < diffChance)
             {
-                float3 rayOutDir = normalize(SampleHemisphere4(hit.norm));
+                float3 rayOutDir = normalize(SampleHemisphere3(hit.norm));
                 float3 H = normalize(ray.dir + rayOutDir);
                 DiffuseModel(hit, ray.dir, rayOutDir, H, ray.energy);
                 ray.dir = rayOutDir;
@@ -99,13 +119,14 @@ float3 Shade(inout Ray ray, HitInfo hit)
             {
                 float3 rayOutDir = normalize(lerp(
                     reflect(ray.dir, hit.norm),
-                    SampleHemisphere4(hit.norm),
+                    SampleHemisphere3(hit.norm),
                     hit.mat.roughness * hit.mat.roughness
                 ));
                 float3 H = normalize(ray.dir + rayOutDir);
                 SpecReflModel(hit, ray.dir, rayOutDir, H, ray.energy);
                 ray.dir = rayOutDir;
                 ray.energy *= 1.0 / clamp((1.0 - diffChance), 1e-2, 1.0);
+                lightContrib *= hit.mat.roughness * hit.mat.roughness;
             }
         }
         return hit.mat.emission + lightContrib;

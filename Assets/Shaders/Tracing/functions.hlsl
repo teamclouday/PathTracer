@@ -245,6 +245,22 @@ Ray PrepareTreeEnterRay(Ray ray, int transformIdx)
     return CreateRay(origin, dir);
 }
 
+float PrepareTreeEnterTargetDistance(float targetDist, int transformIdx)
+{
+    float4x4 worldToLocal = _Transforms[transformIdx * 2 + 1];
+    if (targetDist >= 1.#INF)
+    {
+        return targetDist;
+    }
+    else
+    {
+        // transform a directional vector of length targetDist
+        // and return the new length
+        float3 dir = mul(worldToLocal, float4(targetDist, 0.0, 0.0, 0.0)).xyz;
+        return length(dir);
+    }
+}
+
 void PrepareTreeEnterHit(Ray rayLocal, inout HitInfo hit, int transformIdx)
 {
     float4x4 worldToLocal = _Transforms[transformIdx * 2 + 1];

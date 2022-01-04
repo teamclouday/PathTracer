@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.IO;
+using System.Collections.Generic;
 
 /// <summary>
 /// Main body of ray tracing
@@ -14,6 +15,9 @@ public class Tracing : MonoBehaviour
 
     [SerializeField]
     Light DirectionalLight;
+
+    [SerializeField]
+    Light[] PointLights;
 
     [SerializeField]
     Texture SkyboxTexture;
@@ -63,11 +67,14 @@ public class Tracing : MonoBehaviour
 
     private int dispatchGroupX, dispatchGroupY;
 
-    private Vector4 directionalLightInfo;
-    private Vector3 directionalLightColorInfo;
+    private Vector3 directionalLightInfo;
+    private Vector4 directionalLightColorInfo;
     // angles in radians
     private float directionalLightYaw = 0.0f;
     private float directionalLightPitch = 0.0f;
+    // point lights
+    private int pointLightsCount;
+    private ComputeBuffer pointLightsBuffer;
 
     private Denoise denoiser;
 
@@ -89,9 +96,9 @@ public class Tracing : MonoBehaviour
         }
     }
 
-    private void GetSceneInfo()
+    private void GetSceneInfo(bool force = false)
     {
-        if (!EnableDenoiser || sampleCount % DenoiserStartSamples != 0) return;
+        if ((!EnableDenoiser || sampleCount % DenoiserStartSamples != 0) && !force) return;
         ValidateTextures();
         SetShaderParameters(InfoShader, 1);
         InfoShader.SetTexture(0, "_FrameTarget", denoiseAlbedo);
@@ -143,7 +150,7 @@ public class Tracing : MonoBehaviour
     private void SetShaderParameters(ComputeShader shader, int targetCount)
     {
         // random pixel offset
-        shader.SetVector("_PixelOffset", GeneratePixelOffset());
+        shader.SetVector("_PixelOffset", new Vector2(Random.value, Random.value));
         // trace depth
         shader.SetInt("_TraceDepth", TraceDepth);
         // random seed
@@ -171,6 +178,9 @@ public class Tracing : MonoBehaviour
             // set directional light
             shader.SetVector("_DirectionalLight", directionalLightInfo);
             shader.SetVector("_DirectionalLightColor", directionalLightColorInfo);
+            // set point lights
+            shader.SetBuffer(0, "_PointLights", pointLightsBuffer);
+            shader.SetInt("_PointLightsCount", pointLightsCount);
             // set objects info
             if (ObjectManager.VertexBuffer != null) shader.SetBuffer(0, "_Vertices", ObjectManager.VertexBuffer);
             if (ObjectManager.IndexBuffer != null) shader.SetBuffer(0, "_Indices", ObjectManager.IndexBuffer);
@@ -249,8 +259,8 @@ public class Tracing : MonoBehaviour
         // set collect material
         if (collectMaterial == null)
             collectMaterial = new Material(Shader.Find("Hidden/Collect"));
-        // set directional light info
-        UpdateDirectionalLight();
+        // update lights in the scene
+        UpdateLights();
         // init directional light pitch and yaw
         var rot = DirectionalLight.transform.eulerAngles;
         directionalLightPitch = -rot.x * Mathf.Deg2Rad;
@@ -284,7 +294,7 @@ public class Tracing : MonoBehaviour
         if(DirectionalLight.transform.hasChanged)
         {
             ResetSamples();
-            UpdateDirectionalLight();
+            UpdateLights();
             DirectionalLight.transform.hasChanged = false;
         }
         if (ObjectManager.Validate()) ResetSamples();
@@ -309,7 +319,7 @@ public class Tracing : MonoBehaviour
         if(Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.R) && Application.isEditor)
         {
             ObjectManager.ReloadMaterials();
-            UpdateDirectionalLight();
+            UpdateLights();
             ResetSamples();
         }
         // control light rotation
@@ -329,6 +339,30 @@ public class Tracing : MonoBehaviour
         {
             UpdateDirectionalLight(1.0f, 0.0f);
         }
+        // CTRL + C to toggle camera depth of view
+        if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.C))
+        {
+            CameraAperture = (CameraAperture > 0.0f) ? 0.0f : 1.0f;
+            ResetSamples();
+        }
+        if (CameraAperture > 0.0f && Input.GetMouseButtonDown(2))
+        {
+            // get depth from the scene
+            GetSceneInfo(true);
+            var lastActive = RenderTexture.active;
+            Vector3 pos = Input.mousePosition;
+            RenderTexture.active = denoiseNormal;
+            Texture2D copyTex = new Texture2D(1, 1, TextureFormat.RGBAFloat, false);
+            copyTex.ReadPixels(new Rect(pos.x, denoiseNormal.height - pos.y - 1, 1, 1), 0, 0);
+            copyTex.Apply();
+            CameraFocalDistance = copyTex.GetPixel(0, 0).a;
+            if (float.IsInfinity(CameraFocalDistance))
+                CameraFocalDistance = 1.0f;
+            Debug.Log("Hit " + CameraFocalDistance);
+            RenderTexture.active = lastActive;
+            UnityEngine.Object.Destroy(copyTex);
+            ResetSamples();
+        }
     }
 
     private void OnDestroy()
@@ -339,20 +373,49 @@ public class Tracing : MonoBehaviour
         if(frameConverged != null) frameConverged.Release();
         if(denoiseAlbedo != null) denoiseAlbedo.Release();
         if(denoiseNormal != null) denoiseNormal.Release();
+        if(pointLightsBuffer != null) pointLightsBuffer.Release();
     }
 
-    private void UpdateDirectionalLight()
+    private void UpdateLights()
     {
+        // record directional light info
         Vector3 dir = DirectionalLight.transform.forward;
-        directionalLightInfo = new Vector4(
-            -dir.x, -dir.y, -dir.z,
-            DirectionalLight.intensity
+        directionalLightInfo = new Vector3(
+            -dir.x, -dir.y, -dir.z
         );
-        directionalLightColorInfo = new Vector3(
+        directionalLightInfo = Vector3.Normalize(directionalLightInfo);
+        directionalLightColorInfo = new Vector4(
             DirectionalLight.color.r,
             DirectionalLight.color.g,
-            DirectionalLight.color.b
+            DirectionalLight.color.b,
+            DirectionalLight.intensity
         );
+        // prepare point lights
+        if (pointLightsBuffer != null)
+            pointLightsBuffer.Release();
+        List<Vector4> pointLightsPosColor = new List<Vector4>();
+        foreach(Light light in PointLights)
+        {
+            if (light.type != LightType.Point) continue;
+            pointLightsCount++;
+            pointLightsPosColor.Add(new Vector4(
+                light.transform.position.x,
+                light.transform.position.y,
+                light.transform.position.z,
+                light.range
+            ));
+            pointLightsPosColor.Add(new Vector4(
+                light.color.r,
+                light.color.g,
+                light.color.b,
+                light.intensity
+            ));
+        }
+        // if no point light, insert empty vector to make buffer happy
+        if (pointLightsCount == 0)
+            pointLightsPosColor.Add(Vector4.zero);
+        pointLightsBuffer = new ComputeBuffer(pointLightsPosColor.Count, 4 * sizeof(float));
+        pointLightsBuffer.SetData(pointLightsPosColor);
     }
 
     private void UpdateDirectionalLight(float x, float y)
@@ -368,21 +431,6 @@ public class Tracing : MonoBehaviour
         DirectionalLight.transform.position = Vector3.zero;
         DirectionalLight.transform.LookAt(dir);
         DirectionalLight.transform.hasChanged = true;
-    }
-
-    private Vector2 GeneratePixelOffset()
-    {
-        // reference: https://github.com/knightcrawler25/GLSL-PathTracer/blob/master/src/shaders/preview.glsl
-        //Vector2 offset;
-        //float r1 = 2.0f * Random.value;
-        //float r2 = 2.0f * Random.value;
-        //offset.x = r1 < 1.0f ? Mathf.Sqrt(r1) - 1.0f : 1.0f - Mathf.Sqrt(2.0f - r1);
-        //offset.y = r2 < 1.0f ? Mathf.Sqrt(r2) - 1.0f : 1.0f - Mathf.Sqrt(2.0f - r2);
-        //offset.x += 1.0f;
-        //offset.y += 1.0f;
-        //offset *= 0.5f;
-        //return offset;
-        return new Vector2(Random.value, Random.value);
     }
 
     private void ResetSamples()

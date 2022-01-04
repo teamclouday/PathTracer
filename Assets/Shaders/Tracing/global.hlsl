@@ -22,8 +22,12 @@ float _SkyboxIntensity;
 float2 _PixelOffset;
 
 // directional light info
-float4 _DirectionalLight;
-float3 _DirectionalLightColor;
+float3 _DirectionalLight;
+float4 _DirectionalLightColor;
+
+// point lights info
+StructuredBuffer<float4> _PointLights;
+int _PointLightsCount;
 
 // trace depth
 int _TraceDepth;

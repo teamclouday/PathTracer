@@ -157,13 +157,18 @@ MonoBehaviour:
   RayTracingShader: {fileID: 7200000, guid: 665d1ef5183a88c43ad98a3cf93e0ddd, type: 3}
   InfoShader: {fileID: 7200000, guid: b9568c70d14d4ae49a257b1843b38f9a, type: 3}
   DirectionalLight: {fileID: 725623317}
-  SkyboxTexture: {fileID: 8900000, guid: 4dbc9c26cab64a242b32e55a02f630c8, type: 2}
+  SkyboxTexture: {fileID: 8900000, guid: b5048f0d8dca2ee41aaf9a2aecf4fa94, type: 2}
   SkyboxIntensity: 1
   TraceDepth: 4
   CameraFocalDistance: 1
   CameraAperture: 0
   EnableDenoiser: 0
   DenoiseType: 1
+  DenoiserCoefficients:
+    Color: 1
+    Normal: 0.5
+    Depth: 0.3
+    Strength: 1
   DenoiserStartSamples: 40
 --- !u!20 &124497782
 Camera:
@@ -283,7 +288,7 @@ Light:
   m_Type: 1
   m_Shape: 0
   m_Color: {r: 1, g: 0.95686275, b: 0.8392157, a: 1}
-  m_Intensity: 0
+  m_Intensity: 1
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -483,6 +488,10 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: 511e963be997dbe40b8a7df0944608a2, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -1633167179709135594, guid: 511e963be997dbe40b8a7df0944608a2, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -13.5
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 511e963be997dbe40b8a7df0944608a2, type: 3}
       propertyPath: m_Name

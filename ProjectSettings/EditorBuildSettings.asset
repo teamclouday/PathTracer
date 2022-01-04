@@ -6,6 +6,6 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/Helmet.unity
-    guid: 28fa9cccfcc170a4c9cdf9c0412a70f9
+    path: Assets/Scenes/FireplaceRoom.unity
+    guid: dafc3297691821d4e9080fbed99f9bd8
   m_configObjects: {}

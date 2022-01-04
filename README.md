@@ -245,6 +245,8 @@ Left CTRL + X -> save screenshot in data folder
 Left CTRL + V -> toggle denoiser (default is off)
 Left CTRL + R -> Reload materials and light info (editor only)
 Left CTRL + SPACE -> Switch between Unity renderer and Path tracer
+Left CTRL + C -> toggle camera depth of view
+Middle Mouse Click -> focus on current position (only when camera depth is enabled)
 ```
 
 ------
