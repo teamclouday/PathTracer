@@ -174,5 +174,5 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     }
     // write to frame target
     float sampleCount = max(_FrameTarget[targetIdx].a, 0.0);
-    _FrameTarget[targetIdx] = float4(color, sampleCount + 0.01);
+    _FrameTarget[targetIdx] = float4(saturate(color), sampleCount + 0.1);
 }

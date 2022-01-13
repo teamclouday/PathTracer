@@ -406,7 +406,7 @@ MonoBehaviour:
     Normal: 0.5
     Depth: 0.3
     Strength: 1
-  DenoiserStartSamples: 100
+  DenoiserStartSamples: 50
 --- !u!1 &737718085
 GameObject:
   m_ObjectHideFlags: 0

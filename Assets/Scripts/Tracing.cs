@@ -50,7 +50,7 @@ public class Tracing : MonoBehaviour
     }; // coefficient for real time denoiser
 
     [SerializeField, Range(10, 200)]
-    int DenoiserStartSamples = 100;
+    int DenoiserStartSamples = 50;
 
     public static bool ComputeLock = false;
     public static bool ComputeLockUpdated = false;
@@ -65,7 +65,9 @@ public class Tracing : MonoBehaviour
     private int sampleCount, frameCount;
     private Material collectMaterial, clearMaterial;
 
-    private int dispatchGroupX, dispatchGroupY, dispatchGroupXFull, dispatchGroupYFull;
+    private readonly int dispatchGroupX = 32;
+    private readonly int dispatchGroupY = 32;
+    private int dispatchGroupXFull, dispatchGroupYFull;
     private Vector2 dispatchOffsetLimit;
     private Vector4 dispatchCount;
 
@@ -212,8 +214,6 @@ public class Tracing : MonoBehaviour
         //int pixels = width * height;
         dispatchGroupXFull = Mathf.CeilToInt(Screen.width / 8.0f);
         dispatchGroupYFull = Mathf.CeilToInt(Screen.height / 8.0f);
-        dispatchGroupX = 32;
-        dispatchGroupY = 32;
         dispatchOffsetLimit = new Vector2(
             width - dispatchGroupX * 8,
             height - dispatchGroupY * 8
