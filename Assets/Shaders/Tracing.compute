@@ -141,16 +141,20 @@ float3 Shade(inout Ray ray, HitInfo hit)
     }
 }
 
-[numthreads(8,8,1)]
+[numthreads(8, 8, 1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     // get output dimensions
     uint width, height;
     _FrameTarget.GetDimensions(width, height);
+    float2 idOffset = floor(_PixelOffset);
+    uint2 targetIdx = id.xy + uint2(idOffset);
+    if (targetIdx.x >= width || targetIdx.y >= height)
+        return;
     // create camera
-    Camera camera = CreateCamera();
+    Camera camera = CreateCamera(_PixelOffset - idOffset);
     // save pixel center
-    float2 center = float2(id.xy);
+    float2 center = float2(targetIdx);
     // init random seed
     //rng_initialize(dot(center, camera.offset), _FrameCount);
     rng_initialize(center, _FrameCount);
@@ -169,5 +173,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             break;
     }
     // write to frame target
-    _FrameTarget[id.xy] = float4(color, 1.0);
+    float sampleCount = max(_FrameTarget[targetIdx].a, 0.0);
+    _FrameTarget[targetIdx] = float4(saturate(color), sampleCount + 0.1);
 }

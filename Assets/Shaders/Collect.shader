@@ -39,13 +39,23 @@ Shader "Hidden/Collect"
             }
 
             sampler2D _MainTex;
-            float _SampleCount;
+            //float _SampleCount;
 
             fixed4 frag(v2f i) : SV_Target
             {
-                return Linear2SRGB(
-                    float4(tex2D(_MainTex, i.uv).rgb, 1.0 / (_SampleCount + 1.0))
-                );
+                float4 color = tex2D(_MainTex, i.uv);
+                /*if (color.a == 0.0)
+                {
+                    return 0.0;
+                }
+                else
+                {
+                    return Linear2SRGB(
+                        float4(color.rgb, 1.0 / (_SampleCount + 1.0))
+                    );
+                }*/
+                return Linear2SRGB(float4(color.rgb, 1.0 / (color.a * 100.0 + 1.0)));
+                //return float4(color.a * 10.0, color.a * 10.0, color.a * 10.0, 1.0);
                 //return float4(tex2D(_MainTex, i.uv).rgb, 1.0 / (_SampleCount + 1.0));
             }
             ENDCG

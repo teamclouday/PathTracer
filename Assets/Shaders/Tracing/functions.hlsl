@@ -7,14 +7,14 @@
 #include "colors.hlsl"
 #include "bxdf.hlsl"
 
-Camera CreateCamera()
+Camera CreateCamera(float2 offset)
 {
     Camera camera;
     camera.fov_scale = _CameraInfo.x;
     camera.focalDist = _CameraInfo.y;
     camera.aperture = _CameraInfo.z;
     camera.ratio = _CameraInfo.w;
-    camera.offset = _PixelOffset;
+    camera.offset = offset;
     camera.forward = _CameraForward;
     camera.right = _CameraRight;
     camera.up = _CameraUp;

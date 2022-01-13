@@ -320,7 +320,7 @@ MonoBehaviour:
   - {fileID: 2120683881}
   SkyboxTexture: {fileID: 8900000, guid: 4dbc9c26cab64a242b32e55a02f630c8, type: 2}
   SkyboxIntensity: 1
-  TraceDepth: 5
+  TraceDepth: 6
   CameraFocalDistance: 1
   CameraAperture: 0
   EnableDenoiser: 0
