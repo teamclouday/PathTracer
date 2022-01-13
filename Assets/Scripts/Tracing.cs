@@ -297,8 +297,8 @@ public class Tracing : MonoBehaviour
     private void Start()
     {
         // reduce framerate and gpu workload, hopefully
-        Application.targetFrameRate = 72;
-        QualitySettings.vSyncCount = 0;
+        //Application.targetFrameRate = 72;
+        //QualitySettings.vSyncCount = 0;
         ResetSamples();
         //Random.InitState(12345);
         // set up denoiser
