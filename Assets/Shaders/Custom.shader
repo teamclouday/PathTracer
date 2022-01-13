@@ -35,6 +35,7 @@ Shader "Autodesk Interactive (Customized)"
         [HideInInspector] _OcclusionStrength("Strength", Range(0.0, 1.0)) = 1.0
         _OcclusionMap("Occlusion", 2D) = "white" {}
 
+        [Toggle] _Emission("Enable Emission", Float) = 0
         _EmissionColor("Color", Color) = (0,0,0)
         _EmissionMap("Emission", 2D) = "white" {}
 

@@ -62,10 +62,13 @@ public class Tracing : MonoBehaviour
 
     private Camera mainCamera;
 
-    private uint sampleCount;
-    private Material collectMaterial;
+    private int sampleCount, frameCount;
+    private Material collectMaterial, clearMaterial;
 
-    private int dispatchGroupX, dispatchGroupY;
+    private int dispatchGroupX, dispatchGroupY, dispatchGroupXFull, dispatchGroupYFull;
+    private Vector2 dispatchOffsetLimit;
+    private Vector4 dispatchCount;
+
 
     private Vector3 directionalLightInfo;
     private Vector4 directionalLightColorInfo;
@@ -103,7 +106,7 @@ public class Tracing : MonoBehaviour
         SetShaderParameters(InfoShader, 1);
         InfoShader.SetTexture(0, "_FrameTarget", denoiseAlbedo);
         InfoShader.SetTexture(0, "_FrameNormalTarget", denoiseNormal);
-        InfoShader.Dispatch(0, dispatchGroupX, dispatchGroupY, 1);
+        InfoShader.Dispatch(0, dispatchGroupXFull, dispatchGroupYFull, 1);
         Debug.Log("Scene Info fetched (Samples " + sampleCount + ")");
     }
 
@@ -116,7 +119,7 @@ public class Tracing : MonoBehaviour
         // set frame target
         RayTracingShader.SetTexture(0, "_FrameTarget", frameTarget);
         // set sample count in collect shader
-        collectMaterial.SetFloat("_SampleCount", sampleCount);
+        //collectMaterial.SetFloat("_SampleCount", sampleCount);
         // dispatch and generate frame
         RayTracingShader.Dispatch(0, dispatchGroupX, dispatchGroupY, 1);
         // update frames
@@ -144,19 +147,21 @@ public class Tracing : MonoBehaviour
         else
             Graphics.Blit(frameConverged, destination);
         // update sample count
-        sampleCount++;
+        //sampleCount++;
+        frameCount++;
+        IncrementDispatchCount();
     }
 
     private void SetShaderParameters(ComputeShader shader, int targetCount)
     {
         // random pixel offset
-        shader.SetVector("_PixelOffset", new Vector2(Random.value, Random.value));
+        shader.SetVector("_PixelOffset", GeneratePixelOffset());
         // trace depth
         shader.SetInt("_TraceDepth", TraceDepth);
         // random seed
         //shader.SetFloat("_Seed", Random.value);
         // frame count
-        shader.SetInt("_FrameCount", (int)sampleCount);
+        shader.SetInt("_FrameCount", frameCount);
         // only update these parameters if redraw
         if (sampleCount % targetCount == 0)
         {
@@ -200,6 +205,27 @@ public class Tracing : MonoBehaviour
         }
     }
 
+    private void EstimateGroups(int width, int height)
+    {
+        // target dispatch 32x32 groups
+        // each group has 8x8 threads
+        //int pixels = width * height;
+        dispatchGroupXFull = Mathf.CeilToInt(Screen.width / 8.0f);
+        dispatchGroupYFull = Mathf.CeilToInt(Screen.height / 8.0f);
+        dispatchGroupX = 32;
+        dispatchGroupY = 32;
+        dispatchOffsetLimit = new Vector2(
+            width - dispatchGroupX * 8,
+            height - dispatchGroupY * 8
+        );
+        dispatchOffsetLimit = Vector2.Max(dispatchOffsetLimit, Vector2.zero);
+        dispatchCount = new Vector4(
+            0.0f, 0.0f,
+            Mathf.Ceil(width / (float)(dispatchGroupX * 8)),
+            Mathf.Ceil(height / (float)(dispatchGroupY * 8))
+        );
+    }
+
     private void ValidateTextures()
     {
         // if frame target is not initialized
@@ -214,8 +240,7 @@ public class Tracing : MonoBehaviour
             frameTarget = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
             frameTarget.enableRandomWrite = true;
             frameTarget.Create();
-            dispatchGroupX = Mathf.CeilToInt(Screen.width / 8.0f);
-            dispatchGroupY = Mathf.CeilToInt(Screen.height / 8.0f);
+            EstimateGroups(Screen.width, Screen.height);
         }
         // same for frame converged
         if (frameConverged == null ||
@@ -259,6 +284,8 @@ public class Tracing : MonoBehaviour
         // set collect material
         if (collectMaterial == null)
             collectMaterial = new Material(Shader.Find("Hidden/Collect"));
+        if (clearMaterial == null)
+            clearMaterial = new Material(Shader.Find("Hidden/Clear"));
         // update lights in the scene
         UpdateLights();
         // init directional light pitch and yaw
@@ -271,6 +298,7 @@ public class Tracing : MonoBehaviour
     {
         // reduce framerate and gpu workload, hopefully
         Application.targetFrameRate = 72;
+        QualitySettings.vSyncCount = 0;
         ResetSamples();
         //Random.InitState(12345);
         // set up denoiser
@@ -435,7 +463,42 @@ public class Tracing : MonoBehaviour
 
     private void ResetSamples()
     {
+        //dispatchCount.x = 0.0f;
+        //dispatchCount.y = 0.0f;
         sampleCount = 0;
+        frameCount = 0;
         if (denoiser != null) denoiser.FilteredOnce = false;
+        if (clearMaterial != null)
+            Graphics.Blit(frameTarget, frameTarget, clearMaterial);
+    }
+
+    private Vector2 GeneratePixelOffset()
+    {
+        // first create offset for camera pixel
+        Vector2 offset = new Vector2(Random.value, Random.value);
+        // next for dispatch group offset
+        //offset += new Vector2(
+        //    Mathf.Floor(Random.value * dispatchOffsetLimit.x),
+        //    Mathf.Floor(Random.value * dispatchOffsetLimit.y)
+        //);
+        offset.x += dispatchCount.x * dispatchGroupX * 8;
+        offset.y += dispatchCount.y * dispatchGroupY * 8;
+        return offset;
+    }
+
+    private void IncrementDispatchCount()
+    {
+        dispatchCount.x += 1.0f;
+        if(dispatchCount.x >= dispatchCount.z)
+        {
+            dispatchCount.x = 0.0f;
+            dispatchCount.y += 1.0f;
+            if(dispatchCount.y >= dispatchCount.w)
+            {
+                dispatchCount.x = 0.0f;
+                dispatchCount.y = 0.0f;
+                sampleCount++;
+            }
+        }
     }
 }

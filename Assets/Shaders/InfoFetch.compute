@@ -39,8 +39,7 @@ void CSMain(uint3 id : SV_DispatchThreadID)
     uint width, height;
     _FrameTarget.GetDimensions(width, height);
     // create camera
-    Camera camera = CreateCamera();
-    camera.offset = 0.5;
+    Camera camera = CreateCamera(0.5);
     // save pixel center
     float2 center = float2(id.xy);
     // init random seed

@@ -7,9 +7,9 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: meshMat
+  m_Name: mat4
   m_Shader: {fileID: 4800000, guid: a2c3f24959db7154e96cf85fc4144d3f, type: 3}
-  m_ShaderKeywords: _ALPHAPREMULTIPLY_ON
+  m_ShaderKeywords: 
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -63,13 +63,13 @@ Material:
     - _BumpScale: 1
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
-    - _DstBlend: 10
+    - _DstBlend: 0
     - _Emission: 0
     - _GlossMapScale: 1
-    - _Glossiness: 0.4
+    - _Glossiness: 0.9
     - _GlossyReflections: 1
-    - _IOR: 1.5
-    - _Metallic: 0.2
+    - _IOR: 1.05
+    - _Metallic: 0.1
     - _Mode: 3
     - _OcclusionStrength: 1
     - _Parallax: 0.02
@@ -77,8 +77,8 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _UVSec: 0
-    - _ZWrite: 0
+    - _ZWrite: 1
     m_Colors:
-    - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _EmissionColor: {r: 1.8588235, g: 2, b: 0.7137255, a: 1}
+    - _Color: {r: 0.9622642, g: 0.6257353, b: 0.34042364, a: 1}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []
