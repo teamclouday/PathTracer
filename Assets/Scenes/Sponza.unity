@@ -375,7 +375,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   scrollSpeed: 0.5
   dragSpeed: 0.1
-  keySpeed: 0.5
+  keySpeed: 0.05
 --- !u!114 &609528812
 MonoBehaviour:
   m_ObjectHideFlags: 0

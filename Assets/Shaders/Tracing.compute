@@ -109,7 +109,7 @@ float3 Shade(inout Ray ray, HitInfo hit)
             float diffChance = dot(hit.mat.albedo, LUM) * (1.0 - hit.mat.metallic);
             if (random < diffChance)
             {
-                float3 rayOutDir = normalize(SampleHemisphere3(hit.norm));
+                float3 rayOutDir = normalize(SampleHemisphere4(hit.norm));
                 float3 H = normalize(ray.dir + rayOutDir);
                 DiffuseModel(hit, ray.dir, rayOutDir, H, ray.energy);
                 ray.dir = rayOutDir;
@@ -119,7 +119,7 @@ float3 Shade(inout Ray ray, HitInfo hit)
             {
                 float3 rayOutDir = normalize(lerp(
                     reflect(ray.dir, hit.norm),
-                    SampleHemisphere3(hit.norm),
+                    SampleHemisphere4(hit.norm),
                     hit.mat.roughness * hit.mat.roughness
                 ));
                 float3 H = normalize(ray.dir + rayOutDir);
@@ -173,6 +173,6 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             break;
     }
     // write to frame target
-    float sampleCount = max(_FrameTarget[targetIdx].a, 0.0);
-    _FrameTarget[targetIdx] = float4(saturate(color), sampleCount + 0.1);
+    float sampleCount = _FrameTarget[targetIdx].a;
+    _FrameTarget[targetIdx] = float4(max(color, 0.0), sampleCount + 0.1);
 }

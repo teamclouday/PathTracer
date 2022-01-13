@@ -62,7 +62,7 @@ public class Tracing : MonoBehaviour
 
     private Camera mainCamera;
 
-    private int sampleCount, frameCount;
+    private int sampleCount;
     private Material collectMaterial, clearMaterial;
 
     private readonly int dispatchGroupX = 32;
@@ -149,8 +149,6 @@ public class Tracing : MonoBehaviour
         else
             Graphics.Blit(frameConverged, destination);
         // update sample count
-        //sampleCount++;
-        frameCount++;
         IncrementDispatchCount();
     }
 
@@ -160,10 +158,8 @@ public class Tracing : MonoBehaviour
         shader.SetVector("_PixelOffset", GeneratePixelOffset());
         // trace depth
         shader.SetInt("_TraceDepth", TraceDepth);
-        // random seed
-        //shader.SetFloat("_Seed", Random.value);
         // frame count
-        shader.SetInt("_FrameCount", frameCount);
+        shader.SetInt("_FrameCount", sampleCount);
         // only update these parameters if redraw
         if (sampleCount % targetCount == 0)
         {
@@ -296,11 +292,8 @@ public class Tracing : MonoBehaviour
 
     private void Start()
     {
-        // reduce framerate and gpu workload, hopefully
-        //Application.targetFrameRate = 72;
-        //QualitySettings.vSyncCount = 0;
+        // init sample counts
         ResetSamples();
-        //Random.InitState(12345);
         // set up denoiser
         denoiser = new Denoise(Screen.width, Screen.height);
     }
@@ -463,10 +456,7 @@ public class Tracing : MonoBehaviour
 
     private void ResetSamples()
     {
-        //dispatchCount.x = 0.0f;
-        //dispatchCount.y = 0.0f;
         sampleCount = 0;
-        frameCount = 0;
         if (denoiser != null) denoiser.FilteredOnce = false;
         if (clearMaterial != null)
             Graphics.Blit(frameTarget, frameTarget, clearMaterial);
