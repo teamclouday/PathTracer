@@ -242,7 +242,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   scrollSpeed: 0.5
   dragSpeed: 0.1
-  keySpeed: 0.5
+  keySpeed: 0.1
 --- !u!1 &496793115 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: cdcc8d6b7cec9d944af15231a217c148, type: 3}

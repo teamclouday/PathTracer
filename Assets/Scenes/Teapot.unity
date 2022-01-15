@@ -690,12 +690,19 @@ MonoBehaviour:
   RayTracingShader: {fileID: 7200000, guid: 665d1ef5183a88c43ad98a3cf93e0ddd, type: 3}
   InfoShader: {fileID: 7200000, guid: b9568c70d14d4ae49a257b1843b38f9a, type: 3}
   DirectionalLight: {fileID: 502269411}
+  PointLights: []
   SkyboxTexture: {fileID: 8900000, guid: e8791888d6d354b48a57b55226d8d69d, type: 2}
   SkyboxIntensity: 1
   TraceDepth: 5
   CameraFocalDistance: 1
   CameraAperture: 0
   EnableDenoiser: 0
+  DenoiseType: 0
+  DenoiserCoefficients:
+    Color: 1
+    Normal: 0.5
+    Depth: 0.3
+    Strength: 1
   DenoiserStartSamples: 100
 --- !u!114 &810317819
 MonoBehaviour:
@@ -711,7 +718,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   scrollSpeed: 0.5
   dragSpeed: 0.1
-  keySpeed: 0.5
+  keySpeed: 0.1
 --- !u!1 &1083114556
 GameObject:
   m_ObjectHideFlags: 0
