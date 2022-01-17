@@ -5,6 +5,7 @@ Temp/*
 obj/*
 SampleBuilds/*
 UserSettings/*
+Assets/SkySeries**
 .vsconfig
 *.csproj
 *.sln
