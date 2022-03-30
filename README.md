@@ -5,12 +5,20 @@ My path tracer implemented in Unity engine
 ------
 
 ### Basic Scene
-Built based on the tutorial. Only contains a ground and multiple spheres with skybox.  
+
+<details>
+<summary>Expand for Details</summary>
+
+Built based on the [tutorial](http://blog.three-eyed-games.com/2018/05/03/gpu-ray-tracing-in-unity-part-1/). Only contains a ground and multiple spheres with skybox.  
 Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/tutorial)
 
 <img src="Images/basic.png" width="600" alt="basic">
+</details>
 
 ### Cornell Box
+
+<details>
+<summary>Expand for Details</summary>
 
 Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/cornellbox)
 
@@ -19,8 +27,12 @@ A better random value generator.
 Support unity material `_EMISSION`, `_EmissionColor`, `_Metallic`, `_Glossiness` values.  
 
 <img src="Images/cornellbox.png" width="600" alt="cornellbox">
+</details>
 
 ### Cornell Box & Bunny
+
+<details>
+<summary>Expand for Details</summary>
 
 Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/cornellboxbunny)
 
@@ -37,8 +49,12 @@ RTX2060S has about 18fps at default view position in unity editor mode
 Looking forward to further optimize it.
 
 <img src="Images/cornellboxbunny.png" width="600" alt="cornellboxbunny">
+</details>
 
 ### Dragon
+
+<details>
+<summary>Expand for Details</summary>
 
 Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/dragon)
 
@@ -58,8 +74,12 @@ Total materials = 3
 Loading time is very slow. Need to optimize BVH tree construction.
 
 <img src="Images/dragon.png" width="600" alt="dragon">
+</details>
 
 ### Cornell Box & Buddha
+
+<details>
+<summary>Expand for Details</summary>
 
 Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/cornellboxbuddha)
 
@@ -77,10 +97,10 @@ Total materials = 10
 Expect a long loading time.
 
 Without denoiser (412 samples):  
-<img src="Images/cornellboxbuddha_S412.png" width="600" alt="cornellboxbuddha_S412">
+<img src="Images/cornellboxbuddha_S412.png" width="400" alt="cornellboxbuddha_S412">
 
 With denoiser (195 samples):  
-<img src="Images/cornellboxbuddha_S195.png" width="600" alt="cornellboxbuddha_S195">
+<img src="Images/cornellboxbuddha_S195.png" width="400" alt="cornellboxbuddha_S195">
 
 _Side Note_:  
 After multiple testing in this environment setup,
@@ -95,8 +115,12 @@ hitting an emissive object.
 Therefore, the samples contain many dark pixels because the ray is not
 lucky enough to reach a light source.
 A denoiser is required to improve the visual in this case.
+</details>
 
 ### Bunny
+
+<details>
+<summary>Expand for Details</summary>
 
 Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/bunny)
 
@@ -114,8 +138,12 @@ This is caused by a bug in sampling function, which is partially fixed in this n
 Can refer to [here](https://stackoverflow.com/questions/69510208/path-tracing-cosine-hemisphere-sampling-and-emissive-objects) for details.
 The reason I say it's partially fixed is because though the area light looks fine when it is large, it is still not perfect when it is a small light.
 In fact, no matter of its geometric shape, it will tend to scatter a cross shape distribution of light on the ground.
+</details>
 
 ### Depth of View
+
+<details>
+<summary>Expand for Details</summary>
 
 No executable available, because it is meant to be tested in Unity editor.
 
@@ -123,8 +151,12 @@ Updated camera model, with focal length and aperture.
 
 Denoised view:  
 <img src="Images/bunny_camera.png" width="600" alt="bunny_camera">
+</details>
 
 ### Paper Effect
+
+<details>
+<summary>Expand for Details</summary>
 
 This is done by playing with `rng_initialize`:  
 ```hlsl
@@ -135,8 +167,12 @@ where `camera.offset` is just another vector of independent random values.
 
 The result looks as if it is drawn on a paper, and it is cool without any denoising:  
 <img src="Images/paperbunny.png" width="600" alt="paperbunny">
+</details>
 
 ### Sponza
+
+<details>
+<summary>Expand for Details</summary>
 
 Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/sponza)
 
@@ -158,8 +194,12 @@ Expect a low fps (about 3-5).
 Denoised views:  
 <img src="Images/sponza_lion.png" width="600" alt="sponza_lion">  
 <img src="Images/sponza_down.png" width="600" alt="sponza_down">
+</details>
 
 ### Room
+
+<details>
+<summary>Expand for Details</summary>
 
 Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/room)
 
@@ -190,8 +230,12 @@ Denoised view:
 
 _Side Note_:  
 My previous implementation regards TLAS nodes as an array. For each ray, it loops the full array, tests intersections with bounding volumes and enters BLAS nodes if hit. In scenes such as Sponza, number of TLAS nodes can be large. Therefore, I created another BVH for TLAS nodes, and the ray first recurse in the TLAS tree to find a hit and then enter the corresponding BLAS node. However, based on my experiments, this modification makes rendering even slower. The reason is probably because each node in TLAS tree may have overlapping bounding areas for left and right children. This potentially increases the amount of intersection tests in intermediate nodes that are not leaves. (which affects BLAS tree as well) I think the next improvement is to find a space partition strategy for geometries that reduces overlapping areas to minimum.
+</details>
 
 ### Exterior
+
+<details>
+<summary>Expand for Details</summary>
 
 Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/exterior)
 
@@ -223,10 +267,12 @@ Denoised views:
 <img src="Images/exterior_v2.png" width="500" alt="exterior_v2">  
 <img src="Images/exterior_v3.png" width="500" alt="exterior_v3">  
 <img src="Images/exterior_v4.png" width="500" alt="exterior_v4">  
-
-------
+</details>
 
 ### Fireplace Room
+
+<details>
+<summary>Expand for Details</summary>
 
 Compiled executables available [here](https://github.com/teamclouday/PathTracer/releases/tag/fireplaceroom)
 
@@ -255,10 +301,11 @@ Total roughness textures = 0
 Denoised views:  
 <img src="Images/fireplace1.png" width="500" alt="fireplace1">  
 <img src="Images/fireplace2.png" width="500" alt="fireplace2">  
+</details>
 
 ------
 
-### Controls
+## Controls
 
 ```
 W -> camera forward
@@ -283,7 +330,7 @@ Middle Mouse Click -> focus on current position (only when camera depth is enabl
 
 ------
 
-Reference:
+## References
 
 [GPU Ray Tracing in Unity](http://blog.three-eyed-games.com/2018/05/03/gpu-ray-tracing-in-unity-part-1/)  
 [Physically Based Rendering](https://www.pbr-book.org/3ed-2018/contents)  
